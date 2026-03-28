@@ -2,7 +2,30 @@
 
 ## Overview
 
-This document details the Returning Officer (RO) data model, including application, assignment, and management.
+This document details the Returning Officer (RO) data model, including application, assignment, and management. The model reflects Kenya's actual IEBC (Independent Electoral and Boundaries Commission) structure with 47 County Returning Officers and 290 Constituency Returning Officers.
+
+---
+
+## IEBC Organizational Structure (Actual)
+
+Based on research, the IEBC structure is:
+
+### Leadership (National Office - Nairobi)
+- **Chairperson**: Erastus Edung Ethekon
+- **Vice Chairperson**: Fahima Araphat Abdallah
+- **5 Commissioners**: Total of 7 commissioners
+- **CEO/Commission Secretary**: Moses Ledama Sunkuli (Acting)
+
+### Staff
+- Approximately 900 employees (2025)
+- National office: Anniversary Towers, Nairobi
+
+### Regional Structure
+- **47 County Returning Officers** (one per county)
+- **Deputy County Returning Officers**
+- **290 Constituency Returning Officers** (one per constituency)
+- **Deputy Constituency Returning Officers**
+- **Ward-level staff**
 
 ---
 
@@ -157,6 +180,43 @@ export class ReturningOfficer {
 
 ---
 
+## 1b. IEBC-Specific Enums
+
+```typescript
+// New enum reflecting IEBC structure
+export enum IEBCRole {
+  CHAIRPERSON = 'chairperson',
+  VICE_CHAIRPERSON = 'vice_chairperson',
+  COMMISSIONER = 'commissioner',
+  CEO = 'ceo',
+  COUNTY_RETURNING_OFFICER = 'county_ro',
+  DEPUTY_COUNTY_RO = 'deputy_county_ro',
+  CONSTITUENCY_RO = 'constituency_ro',
+  DEPUTY_CONSTITUENCY_RO = 'deputy_constituency_ro',
+}
+
+// Updated RO Level to match IEBC
+export enum ROLevel {
+  NATIONAL = 'national',       // Chairperson, Commissioners, CEO
+  COUNTY = 'county',           // County Returning Officer
+  CONSTITUENCY = 'constituency' // Constituency Returning Officer
+}
+
+// IEBC Regions (for administrative grouping)
+export enum IEBCRegion {
+  CENTRAL = 'central',
+  COAST = 'coast',
+  EASTERN = 'eastern',
+  NAIROBI = 'nairobi',
+  NORTH_EASTERN = 'north_eastern',
+  NYANZA = 'nyanza',
+  RIFT_VALLEY = 'rift_valley',
+  WESTERN = 'western',
+}
+```
+
+---
+
 ## 2. Application Entity
 
 ```typescript
@@ -250,6 +310,41 @@ export class ROApplication {
   updatedAt: Date;
 }
 ```
+
+---
+
+## 2b. Kenya Counties Reference
+
+The system supports all 47 Kenyan counties:
+
+| Code | County | Region | Code | County | Region |
+|------|--------|--------|------|--------|--------|
+| 001 | Mombasa | Coast | 025 | Samburu | Rift Valley |
+| 002 | Kwale | Coast | 026 | Trans Nzoia | Rift Valley |
+| 003 | Kilifi | Coast | 027 | Uasin Gishu | Rift Valley |
+| 004 | Lamu | Coast | 028 | Elgeyo-Marakwet | Rift Valley |
+| 005 | Taita-Taveta | Coast | 029 | Nandi | Rift Valley |
+| 006 | Garissa | North Eastern | 030 | Baringo | Rift Valley |
+| 007 | Wajir | North Eastern | 031 | Laikipia | Rift Valley |
+| 008 | Mandera | North Eastern | 032 | Nakuru | Rift Valley |
+| 009 | Marsabit | Eastern | 033 | Narok | Rift Valley |
+| 010 | Isiolo | Eastern | 034 | Kajiado | Rift Valley |
+| 011 | Meru | Eastern | 035 | Kericho | Rift Valley |
+| 012 | Tharaka-Nithi | Eastern | 036 | Bomet | Rift Valley |
+| 013 | Embu | Eastern | 037 | Kakamega | Western |
+| 014 | Kitui | Eastern | 038 | Vihiga | Western |
+| 015 | Machakos | Eastern | 039 | Bungoma | Western |
+| 016 | Makueni | Eastern | 040 | Busia | Western |
+| 017 | Nyandarua | Central | 041 | Siaya | Nyanza |
+| 018 | Nyeri | Central | 042 | Homa Bay | Nyanza |
+| 019 | Kirinyaga | Central | 043 | Migori | Nyanza |
+| 020 | Murang'a | Central | 044 | Kisii | Nyanza |
+| 021 | Kiambu | Central | 045 | Nyamira | Nyanza |
+| 022 | Turkana | Rift Valley | 046 | Nairobi | Nairobi |
+| 023 | West Pokot | Rift Valley | 047 | Kiambu* | Central |
+| 024 | Pokot | Rift Valley | | | |
+
+*Note: Nairobi is a city-county with special administrative status
 
 ---
 
@@ -390,21 +485,86 @@ CREATE INDEX idx_ro_app_cycle ON ro_applications(election_cycle);
 
 ---
 
-## 5. RO Permissions Matrix
+## 5. RO Permissions Matrix (IEBC-Aligned)
 
-| Permission | County RO | Constituency RO | Ward RO | Super Admin |
-|------------|-----------|-----------------|---------|-------------|
-| View county voters | ✓ | ✓ | ✓ | ✓ |
-| Manage county candidates | ✓ | ✗ | ✗ | ✓ |
-| View county results | ✓ | ✗ | ✗ | ✓ |
-| View constituency voters | ✗ | ✓ | ✓ | ✓ |
-| Manage constituency candidates | ✗ | ✓ | ✗ | ✓ |
-| View constituency results | ✗ | ✓ | ✗ | ✓ |
-| View ward voters | ✗ | ✗ | ✓ | ✓ |
-| Manage ward candidates | ✗ | ✗ | ✓ | ✓ |
-| View ward results | ✗ | ✗ | ✓ | ✓ |
-| Approve sub-ROs | ✓ | ✓ | ✗ | ✓ |
-| View all counties | ✗ | ✗ | ✗ | ✓ |
+| Permission | Chairperson | Commissioner | CEO | County RO | Deputy County RO | Constituency RO | Super Admin |
+|------------|-------------|--------------|-----|-----------|------------------|-----------------|-------------|
+| View all voters (national) | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| View county voters | ✓ | ✓ | ✓ | ✓ | ✓ (read-only) | ✗ | ✓ |
+| View constituency voters | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage county candidates | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| Manage constituency candidates | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| View county results | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| View constituency results | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| View national results | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| Approve County ROs | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| Approve Constituency ROs | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| Manage system settings | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| View audit logs | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| Manage elections | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+
+---
+
+## 5b. IEBC Appointment Workflow (Actual Process)
+
+The actual IEBC RO appointment process:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                 IEBC RO APPOINTMENT PROCESS                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   PHASE 1: VACANCY ANNOUNCEMENT                                     │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  Commission publishes vacancy for County RO positions       │  │
+│   │  - Published in Kenya Gazette                               │  │
+│   │  - IEBC website                                             │  │
+│   │  - Print media                                              │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│   PHASE 2: APPLICATION                                              │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  Candidates submit:                                          │  │
+│   │  - Application form                                          │  │
+│   │  - National ID copy                                          │  │
+│   │  - Academic certificates                                     │  │
+│   │  - Professional experience documents                         │  │
+│   │  - Clear police clearance                                    │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│   PHASE 3: SHORTLISTING                                             │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  Secretariat reviews applications:                            │  │
+│   │  - Verify qualifications                                     │  │
+│   │  - Check integrity                                           │  │
+│   │  - Shortlist candidates                                      │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│   PHASE 4: INTERVIEW & ASSESSMENT                                   │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  shortlisted candidates undergo:                              │  │
+│   │  - Oral interview panel                                       │  │
+│   │  - Competency assessment                                      │  │
+│   │  - Integrity verification                                     │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│   PHASE 5: COMMISSION APPROVAL                                      │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  Interview panel submits recommendations to:                  │  │
+│   │  → The Commission (7 Commissioners)                          │  │
+│   │  → Commission deliberates and approves                       │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│   PHASE 6: APPOINTMENT                                              │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  Approved candidates:                                         │  │
+│   │  - Appointed by the Commission                               │  │
+│   │  - Oath of office                                            │  │
+│   │  - Deployment to respective county                           │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -428,6 +588,86 @@ CREATE INDEX idx_ro_app_cycle ON ro_applications(election_cycle);
   }
 }
 ```
+
+---
+
+## 7. System Leadership (Default Accounts)
+
+The system includes pre-configured leadership accounts matching actual IEBC structure:
+
+| Role | Name | Email | County/Region |
+|------|------|-------|---------------|
+| Chairperson | Erastus Edung Ethektor | chair@iebc.ke | National |
+| Vice Chairperson | Fahima Araphat Abdallah | vice@iebc.ke | National |
+| Commissioner 1 | comm1@iebc.ke | National |
+| Commissioner 2 | comm2@iebc.ke | National |
+| Commissioner 3 | comm3@iebc.ke | National |
+| Commissioner 4 | comm4@iebc.ke | National |
+| Commissioner 5 | comm5@iebc.ke | National |
+| CEO/Commission Secretary | Moses Ledama Sunkuli | ceo@iebc.ke | National |
+| County RO - Nairobi | (appointed) | nairobi.ro@iebc.ke | Nairobi (046) |
+| County RO - Mombasa | (appointed) | mombasa.ro@iebc.ke | Mombasa (001) |
+| ... | ... | ... | ... (all 47 counties) |
+
+---
+
+## 8. County-RO Assignment
+
+Each of Kenya's 47 counties requires a County Returning Officer:
+
+```sql
+-- Sample county RO assignments
+INSERT INTO returning_officers (id, first_name, last_name, email, iebc_role, assigned_county_id, assigned_county_name, level, status) VALUES
+('ro-001', 'County', 'RO Mombasa', 'mombasa.ro@iebc.ke', 'COUNTY_RETURNING_OFFICER', '046', 'Nairobi', 'county', 'approved'),
+('ro-002', 'County', 'RO Nairobi', 'nairobi.ro@iebc.ke', 'COUNTY_RETURNING_OFFICER', '001', 'Mombasa', 'county', 'approved'),
+-- ... 45 more county ROs
+```
+
+Each County RO manages:
+- Deputy County Returning Officer(s)
+- All Constituency Returning Officers in their county
+- Voter registration for the county
+- Election results aggregation for the county
+
+---
+
+## 9. Constituency Structure
+
+Kenya has 290 constituencies, each with a Constituency Returning Officer:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│               CONSTITUENCY STRUCTURE                                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   COUNTY (47 total)                                                 │
+│   └── County Returning Officer (CRO)                               │
+│       ├── Deputy County Returning Officer (DCRO)                   │
+│       │                                                              │
+│       ├── CONSTITUENCY 1                                            │
+│       │   └── Constituency Returning Officer (CRO)                 │
+│       │       └── Deputy CRO                                        │
+│       │           └── Ward Staff                                    │
+│       │                                                              │
+│       ├── CONSTITUENCY 2                                            │
+│       │   └── Constituency Returning Officer                        │
+│       │       └── ...                                               │
+│       │                                                              │
+│       └── ... (6-30 constituencies per county)                     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Sample Constituencies per County
+
+| County | # Constituencies | Sample Constituency |
+|--------|------------------|---------------------|
+| Nairobi | 17 | Westlands, Dagoretti North, Kibra |
+| Mombasa | 6 | Changamwe, Jomvu, Kisauni |
+| Nakuru | 11 | Nakuru Town West, Naivasha, Molo |
+| Kakamega | 12 | Lurambi, Shinyalu, Ikolomani |
+| Kiambu | 12 | Gatundu South, Kiambu Town |
+| (All 47) | **290** | ... |
 
 ### RO List Response
 
