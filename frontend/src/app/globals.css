@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary-50: 239 246 255;
+    --color-primary-100: 219 234 254;
+    --color-primary-200: 191 219 254;
+    --color-primary-300: 147 197 253;
+    --color-primary-400: 96 165 250;
+    --color-primary-500: 59 130 246;
+    --color-primary-600: 37 99 235;
+    --color-primary-700: 29 78 216;
+    --color-primary-800: 30 64 175;
+    --color-primary-900: 30 41 59;
+  }
+
+  * {
+    @apply border-neutral-200;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-neutral-50 text-neutral-900 antialiased;
+  }
+
+  /* Dark mode support */
+  .dark {
+    --color-primary-50: 30 41 59;
+    --color-primary-100: 30 58 138;
+    --color-primary-200: 37 99 235;
+    --color-primary-300: 59 130 246;
+    --color-primary-400: 96 165 250;
+    --color-primary-500: 147 197 253;
+    --color-primary-600: 191 219 254;
+    --color-primary-700: 219 234 254;
+    --color-primary-800: 239 246 255;
+    --color-primary-900: 248 250 252;
+  }
+
+  .dark body {
+    @apply bg-neutral-900 text-neutral-100;
+  }
+
+  .dark * {
+    @apply border-neutral-700;
+  }
+}
+
+@layer components {
+  /* Focus styles */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-xl border border-neutral-200 shadow-sm;
+  }
+
+  .card-elevated {
+    @apply bg-white rounded-xl shadow-lg;
+  }
+
+  /* Gradient backgrounds */
+  .bg-hero-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  .bg-secure-gradient {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  }
+
+  .bg-iebc-gradient {
+    background: linear-gradient(135deg, #1E40AF 0%, #059669 100%);
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-700;
+  }
+
+  .text-gradient-secure {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-success to-success-dark;
+  }
+
+  /* Fallback for primary color utilities */
+  .from-primary-500 {
+    --tw-gradient-from: #2563eb var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(37 99 235 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+  
+  .to-primary-700 {
+    --tw-gradient-to: #1e40af var(--tw-gradient-to-position);
+  }
+
+  /* Shake animation */
+  .shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  /* Secure pulse for verified items */
+  .secure-pulse {
+    animation: securePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes securePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    @apply bg-neutral-200 animate-pulse rounded;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* Animation delays */
+  .animation-delay-100 { animation-delay: 100ms; }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
+  .animation-delay-500 { animation-delay: 500ms; }
+
+  /* Text balance */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Hide scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

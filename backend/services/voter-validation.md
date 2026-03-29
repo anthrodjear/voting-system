@@ -62,13 +62,13 @@ export class VoterValidationService {
 ```typescript
 // Validate Kenyan National ID format
 validateNationalIdFormat(nationalId: string): ValidationResult {
-  // Format: 8 digits
-  const formatRegex = /^[0-9]{8}$/;
+  // Format: 8 digits and 14 digits
+  const formatRegex = /^[0-9]{8}{14}$/;
   
   if (!formatRegex.test(nationalId)) {
     return {
       valid: false,
-      error: 'Invalid ID format. Must be 8 digits.'
+      error: 'Invalid ID format. Must be 8 or 14 digits.'
     };
   }
 
