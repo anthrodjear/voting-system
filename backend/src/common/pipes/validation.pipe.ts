@@ -29,7 +29,6 @@ export class ValidationPipeCustom implements PipeTransform<any> {
     const errors = await validate(object, {
       whitelist: this.options?.whitelist ?? true,
       forbidNonWhitelisted: this.options?.forbidNonWhitelisted ?? true,
-      transform: this.options?.transform ?? true,
     });
 
     if (errors.length > 0) {

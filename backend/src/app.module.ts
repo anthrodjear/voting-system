@@ -11,6 +11,8 @@ import { VoteModule } from './modules/vote/vote.module';
 import { BatchModule } from './modules/batch/batch.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
+import { BlockchainModule } from './modules/blockchain/blockchain.module';
+import { HealthController } from './modules/health/health.controller';
 
 import { ThrottlerGuard } from './common/guards/throttler.guard';
 
@@ -62,6 +64,7 @@ import { ThrottlerGuard } from './common/guards/throttler.guard';
     BatchModule,
     AdminModule,
     ReportingModule,
+    BlockchainModule,
   ],
   providers: [
     {
@@ -69,5 +72,6 @@ import { ThrottlerGuard } from './common/guards/throttler.guard';
       useClass: ThrottlerGuard,
     },
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

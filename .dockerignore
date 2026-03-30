@@ -1,0 +1,54 @@
+# Dependencies
+node_modules
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Logs
+logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+DESIGN.md
+docs
+project-tasks
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Frontend
+frontend/node_modules
+frontend/.next
+
+# Backend
+backend/node_modules
+backend/dist
+
+# Test files
+tests
+
+# Scripts
+scripts
+
+# Temporary files
+*.tmp
+*.temp

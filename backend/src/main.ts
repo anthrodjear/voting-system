@@ -1,11 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ValidationPipeCustom } from './common/pipes/validation.pipe';
 import { HttpExceptionFilter } from './common/filters/exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { ThrottlerGuard } from './common/guards/throttler.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

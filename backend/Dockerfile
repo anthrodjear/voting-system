@@ -1,0 +1,108 @@
+# =============================================================================
+# Stage 1: Base - Development dependencies
+# =============================================================================
+FROM node:20-alpine AS base
+
+WORKDIR /app
+
+# Install dependencies for native modules
+RUN apk add --no-cache python3 make g++ git
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies)
+RUN npm ci
+
+# =============================================================================
+# Stage 2: Development - Watch mode with hot reload
+# =============================================================================
+FROM base AS development
+
+# Copy source code
+COPY . .
+
+# Expose the application port
+EXPOSE 3001
+
+# Health check for development
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
+
+# Start the application in development mode with watch
+CMD ["npm", "run", "start:dev"]
+
+# =============================================================================
+# Stage 3: Builder - Production build
+# =============================================================================
+FROM base AS builder
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# =============================================================================
+# Stage 4: Production - Production dependencies only, non-root user
+# =============================================================================
+FROM node:20-alpine AS production
+
+# Set NODE_ENV to production
+ENV NODE_ENV=production
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --omit=dev && \
+    npm cache clean --force
+
+# Copy compiled output from builder stage
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy necessary configuration files for production
+COPY --from=builder /app/tsconfig*.json ./
+COPY --from=builder /app/nest-cli.json ./
+
+# Change ownership to non-root user
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose the application port
+EXPOSE 3001
+
+# Health check configuration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD node -e "
+        const http = require('http');
+        const options = {
+            hostname: 'localhost',
+            port: 3001,
+            path: '/health',
+            method: 'GET',
+            timeout: 5000
+        };
+        const req = http.request(options, (res) => {
+            process.exit(res.statusCode === 200 ? 0 : 1);
+        });
+        req.on('error', () => process.exit(1));
+        req.on('timeout', () => {
+            req.destroy();
+            process.exit(1);
+        });
+        req.end();
+    "
+
+# Start the application
+CMD ["node", "dist/main.js"]

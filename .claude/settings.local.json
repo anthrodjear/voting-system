@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Read(//c/Users/user/Desktop/PROJECTS/voting-system/backend/**)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

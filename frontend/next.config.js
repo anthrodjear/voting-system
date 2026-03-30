@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for smaller Docker image
+  output: 'standalone',
+  
   reactStrictMode: true,
   
   // Image optimization

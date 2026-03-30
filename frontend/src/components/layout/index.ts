@@ -15,6 +15,7 @@ export { AdminSidebar } from './AdminSidebar';
 export { ROSidebar } from './ROSidebar';
 export { VoterLayout } from './VoterLayout';
 export { AuthLayout } from './AuthLayout';
+export { ThemeToggle } from './ThemeToggle';
 
 // ============================================
 // Component Categories

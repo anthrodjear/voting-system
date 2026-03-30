@@ -1,0 +1,62 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: voting-system
+  labels:
+    app: backend
+    component: api
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  RABBITMQ_HOST: "rabbitmq-service"
+  RABBITMQ_PORT: "5672"
+  CORS_ORIGIN: "https://voting.example.com"
+  THROTTLE_TTL: "60000"
+  THROTTLE_LIMIT: "1000"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: voting-system
+  labels:
+    app: backend
+    component: api
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+    component: api
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+      protocol: TCP
+  sessionAffinity: None
+---
+# Optional: LoadBalancer service for external API access (uncomment if needed)
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: backend-external-service
+#   namespace: voting-system
+#   labels:
+#     app: backend
+#     component: api
+# spec:
+#   type: LoadBalancer
+#   selector:
+#     app: backend
+#     component: api
+#   ports:
+#     - name: http
+#       port: 80
+#       targetPort: 3001
+#       protocol: TCP

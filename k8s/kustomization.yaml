@@ -1,0 +1,68 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: voting-system
+
+resources:
+  # Namespace and RBAC
+  - namespace.yaml
+  
+  # ConfigMaps and Secrets
+  - configmaps.yaml
+  - secrets.yaml
+  
+  # Database Layer
+  - database/postgres.yaml
+  - database/redis.yaml
+  - postgres-pvc.yaml
+  
+  # Message Queue
+  - rabbitmq/rabbitmq.yaml
+  
+  # Application Layer
+  - backend/configmap.yaml
+  - backend/deployment.yaml
+  - backend/hpa.yaml
+  
+  # Frontend Layer
+  - frontend/configmap.yaml
+  - frontend/deployment.yaml
+  
+  # Ingress
+  - ingress.yaml
+
+commonLabels:
+  app: voting-system
+  version: v1.0.0
+
+# SecretGenerator for generating secrets from files or env vars
+secretGenerator:
+  - name: database-secrets
+    envs:
+      - database/.env.secrets
+    type: Opaque
+  
+  - name: backend-secrets
+    envs:
+      - backend/.env.secrets
+    type: Opaque
+  
+  - name: rabbitmq-secrets
+    envs:
+      - rabbitmq/.env.secrets
+    type: Opaque
+
+# Images configuration
+images:
+  - name: voting-backend
+    newTag: latest
+  - name: voting-frontend
+    newTag: latest
+
+# Replicas configuration (for development override)
+replicas:
+  - name: backend-deployment
+    count: 3
+  - name: frontend-deployment
+    count: 3

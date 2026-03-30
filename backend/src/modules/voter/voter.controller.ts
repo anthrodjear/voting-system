@@ -1,0 +1,119 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+
+import { VoterService } from './voter.service';
+import { RegisterVoterDto, UpdateVoterDto, BiometricEnrollDto } from '../../dto/voter.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+
+@ApiTags('voters')
+@Controller('voters')
+export class VoterController {
+  constructor(private readonly voterService: VoterService) {}
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register a new voter' })
+  @ApiResponse({ status: 201, description: 'Voter registered successfully' })
+  @ApiResponse({ status: 409, description: 'Voter already exists' })
+  async register(
+    @Body() dto: RegisterVoterDto,
+  ): Promise<{ success: boolean; data: { voterId: string; status: string; message: string } }> {
+    const result = await this.voterService.register(dto);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get voter information' })
+  @ApiResponse({ status: 200, description: 'Voter information' })
+  @ApiResponse({ status: 404, description: 'Voter not found' })
+  async getVoter(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const voter = await this.voterService.findById(id);
+
+    return {
+      success: true,
+      data: {
+        voterId: voter.id,
+        nationalId: voter.nationalId,
+        firstName: voter.firstName,
+        lastName: voter.lastName,
+        county: voter.countyName,
+        constituency: voter.constituencyName,
+        status: voter.status,
+        registeredAt: voter.registeredAt,
+      },
+    };
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update voter information' })
+  @ApiResponse({ status: 200, description: 'Voter updated' })
+  async updateVoter(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateVoterDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<{ success: boolean; data: { voterId: string; updated: boolean } }> {
+    const result = await this.voterService.update(id, dto, userId);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Post(':id/biometrics/enroll')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Enroll voter biometrics' })
+  @ApiResponse({ status: 200, description: 'Biometrics enrolled' })
+  async enrollBiometrics(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: BiometricEnrollDto,
+  ): Promise<{ success: boolean; data: { enrolled: boolean; faceEnrolled: boolean; fingerprintEnrolled: boolean } }> {
+    const result = await this.voterService.enrollBiometrics(id, dto);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Get(':id/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get voter verification status' })
+  @ApiResponse({ status: 200, description: 'Voter status' })
+  async getStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const result = await this.voterService.getStatus(id);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+}

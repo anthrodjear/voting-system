@@ -37,14 +37,14 @@ export default function HomePage() {
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-3">
-              <Link 
-                href="/login"
+              <Link
+                href="/auth/login"
                 className="px-4 py-2 text-neutral-600 hover:text-neutral-900 font-medium transition-colors"
               >
                 Sign In
               </Link>
-              <Link 
-                href="/register"
+              <Link
+                href="/auth/register"
                 className="px-5 py-2.5 bg-iebc-primary text-white font-semibold rounded-lg hover:bg-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-lg"
               >
                 Register to Vote
