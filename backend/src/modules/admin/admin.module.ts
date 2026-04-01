@@ -14,6 +14,9 @@ import { PresidentialCandidate } from '../../entities/presidential-candidate.ent
 import { AuditLog } from '../../entities/audit-log.entity';
 import { Voter } from '../../entities/voter.entity';
 import { Vote } from '../../entities/vote.entity';
+import { Election } from '../../entities/election.entity';
+import { SuperAdmin } from '../../entities/super-admin.entity';
+import { VoteTracking } from '../../entities/vote-tracking.entity';
 
 @Module({
   imports: [
@@ -28,6 +31,9 @@ import { Vote } from '../../entities/vote.entity';
       AuditLog,
       Voter,
       Vote,
+      Election,
+      SuperAdmin,
+      VoteTracking,
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],

@@ -73,30 +73,33 @@ function onTokenRefreshed(token: string): void {
 
 async function refreshToken(): Promise<boolean> {
   try {
-    const { token } = useAuthStore.getState();
+    const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
     
-    if (!token) {
+    if (!storedRefreshToken) {
       return false;
     }
 
     const response = await axios.post<ApiResponse<{ token: string; refreshToken: string; expiresIn: number }>>(
       `${API_BASE_URL}/auth/refresh`,
-      {},
+      { refreshToken: storedRefreshToken },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
       }
     );
 
     if (response.data.success && response.data.data) {
       const newToken = response.data.data.token;
+      const newRefreshToken = response.data.data.refreshToken;
       useAuthStore.getState().login(
         useAuthStore.getState().user!,
         newToken,
         response.data.data.expiresIn
       );
+      if (typeof window !== 'undefined' && newRefreshToken) {
+        localStorage.setItem('refreshToken', newRefreshToken);
+      }
       onTokenRefreshed(newToken);
       return true;
     }
@@ -135,9 +138,23 @@ apiClient.interceptors.request.use(
       return config;
     }
 
-    const { token, isAuthenticated } = useAuthStore.getState();
+    // Read token from zustand store (has it immediately after login)
+    let token: string | null = useAuthStore.getState().token;
     
-    if (isAuthenticated && token) {
+    // Fallback to localStorage if zustand hasn't rehydrated yet
+    if (!token && typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('auth-storage');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          token = parsed.state?.token || null;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 

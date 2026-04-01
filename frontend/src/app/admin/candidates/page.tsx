@@ -1,160 +1,132 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   MagnifyingGlassIcon,
-  PlusIcon,
-  FunnelIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
-  EllipsisVerticalIcon
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { Card, Button, Badge, Input, Modal } from '@/components/ui';
-
-// Mock candidates data
-const candidates = [
-  {
-    id: '1',
-    name: 'Hon. John Odinga',
-    party: 'National Alliance',
-    position: 'President',
-    county: 'Nairobi',
-    status: 'approved' as const,
-    submittedAt: '2027-01-10',
-  },
-  {
-    id: '2',
-    name: 'Dr. Sarah Kimani',
-    party: 'Democratic Party',
-    position: 'President',
-    county: 'Mombasa',
-    status: 'pending' as const,
-    submittedAt: '2027-01-12',
-  },
-  {
-    id: '3',
-    name: 'Eng. Peter Mwangi',
-    party: 'Jubilee Party',
-    position: 'Governor - Nairobi',
-    county: 'Nairobi',
-    status: 'approved' as const,
-    submittedAt: '2027-01-08',
-  },
-  {
-    id: '4',
-    name: 'Prof. Grace Atieno',
-    party: 'ODM',
-    position: 'Governor - Kisumu',
-    county: 'Kisumu',
-    status: 'approved' as const,
-    submittedAt: '2027-01-05',
-  },
-  {
-    id: '5',
-    name: 'Mr. David Kosgei',
-    party: 'KANU',
-    position: 'Governor - Nakuru',
-    county: 'Nakuru',
-    status: 'rejected' as const,
-    submittedAt: '2027-01-11',
-  },
-  {
-    id: '6',
-    name: 'Hon. Mary Njeri',
-    party: 'Wiper Party',
-    position: 'Governor - Mombasa',
-    county: 'Mombasa',
-    status: 'pending' as const,
-    submittedAt: '2027-01-13',
-  },
-];
+import adminService from '@/services/admin';
 
 export default function CandidatesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showApproveModal, setShowApproveModal] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<typeof candidates[0] | null>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'approve' | 'reject';
+    id: string;
+    name: string;
+  } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         candidate.party.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || candidate.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const loadCandidates = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await adminService.getCandidates({
+        search: searchQuery || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        page: pagination.page,
+        limit: pagination.limit,
+      });
+      setCandidates(result.candidates || []);
+      setPagination(result.pagination || { page: 1, limit: 20, total: 0 });
+    } catch (err: any) {
+      setError(err.message || 'Failed to load candidates');
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, statusFilter, pagination.page, pagination.limit]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <Badge variant="success">Approved</Badge>;
-      case 'pending':
-        return <Badge variant="warning">Pending</Badge>;
-      case 'rejected':
-        return <Badge variant="error">Rejected</Badge>;
-      default:
-        return <Badge variant="neutral">{status}</Badge>;
+  useEffect(() => {
+    loadCandidates();
+  }, [loadCandidates]);
+
+  const handleAction = async () => {
+    if (!confirmAction) return;
+    setActionLoading(true);
+    try {
+      if (confirmAction.type === 'approve') {
+        await adminService.approveCandidate(confirmAction.id);
+      } else {
+        await adminService.rejectCandidate(confirmAction.id, 'Rejected by admin');
+      }
+      await loadCandidates();
+      setConfirmAction(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleApprove = (candidate: typeof candidates[0]) => {
-    setSelectedCandidate(candidate);
-    setShowApproveModal(true);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved': return <Badge variant="success">Approved</Badge>;
+      case 'pending': return <Badge variant="warning">Pending</Badge>;
+      case 'rejected': return <Badge variant="error">Rejected</Badge>;
+      default: return <Badge variant="neutral">{status}</Badge>;
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Candidates</h1>
-          <p className="text-neutral-500">Manage candidate applications and approvals</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Candidates</h1>
+          <p className="text-neutral-500 dark:text-neutral-400">Manage candidate applications and approvals</p>
         </div>
-        <Button>
-          <PlusIcon className="w-5 h-5 mr-2" />
-          Add Candidate
-        </Button>
       </div>
 
-      {/* Stats */}
+      {error && (
+        <div className="bg-error-light dark:bg-error-900/20 border border-error/20 text-error px-4 py-3 rounded-lg">
+          {error}
+          <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-3 gap-6">
         <Card className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-success-light">
+          <div className="p-3 rounded-xl bg-success-light dark:bg-success-900/20">
             <CheckCircleIcon className="w-8 h-8 text-success" />
           </div>
           <div>
-            <p className="text-sm text-neutral-500">Approved</p>
-            <p className="text-2xl font-bold text-neutral-900">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Approved</p>
+            <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
               {candidates.filter(c => c.status === 'approved').length}
             </p>
           </div>
         </Card>
-
         <Card className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-warning-light">
+          <div className="p-3 rounded-xl bg-warning-light dark:bg-warning-900/20">
             <ClockIcon className="w-8 h-8 text-warning" />
           </div>
           <div>
-            <p className="text-sm text-neutral-500">Pending</p>
-            <p className="text-2xl font-bold text-neutral-900">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Pending</p>
+            <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
               {candidates.filter(c => c.status === 'pending').length}
             </p>
           </div>
         </Card>
-
         <Card className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-error-light">
+          <div className="p-3 rounded-xl bg-error-light dark:bg-error-900/20">
             <XCircleIcon className="w-8 h-8 text-error" />
           </div>
           <div>
-            <p className="text-sm text-neutral-500">Rejected</p>
-            <p className="text-2xl font-bold text-neutral-900">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Rejected</p>
+            <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
               {candidates.filter(c => c.status === 'rejected').length}
             </p>
           </div>
         </Card>
       </div>
 
-      {/* Filters */}
       <Card>
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
@@ -165,91 +137,132 @@ export default function CandidatesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <select
-            className="h-11 px-4 border border-neutral-300 rounded-lg focus:outline-none focus:border-primary-500"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <div className="flex gap-2">
+            <select
+              className="h-11 px-4 border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-lg focus:outline-none focus:border-primary-500"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Status</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <Button variant="secondary" onClick={loadCandidates}>
+              <ArrowPathIcon className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </Card>
 
-      {/* Table */}
       <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
-              <tr>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700">Candidate</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700">Party</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700">Position</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700">County</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700">Status</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700">Submitted</th>
-                <th className="px-6 py-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {filteredCandidates.map((candidate) => (
-                <tr key={candidate.id} className="hover:bg-neutral-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-neutral-200 rounded-full flex items-center justify-center">
-                        <span className="text-neutral-600 font-semibold">
-                          {candidate.name.charAt(0)}
-                        </span>
-                      </div>
-                      <span className="font-medium text-neutral-900">{candidate.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-neutral-600">{candidate.party}</td>
-                  <td className="px-6 py-4 text-neutral-600">{candidate.position}</td>
-                  <td className="px-6 py-4 text-neutral-600">{candidate.county}</td>
-                  <td className="px-6 py-4">{getStatusBadge(candidate.status)}</td>
-                  <td className="px-6 py-4 text-neutral-600">
-                    {new Date(candidate.submittedAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    {candidate.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="success" onClick={() => handleApprove(candidate)}>
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="danger">
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                  </td>
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-admin-500" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+                <tr>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Candidate</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Party</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Position</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">County</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Status</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Submitted</th>
+                  <th className="px-6 py-4"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                {candidates.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center text-neutral-500 dark:text-neutral-400">
+                      No candidates found
+                    </td>
+                  </tr>
+                ) : (
+                  candidates.map((candidate) => (
+                    <tr key={candidate.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center">
+                            <span className="text-neutral-600 dark:text-neutral-300 font-semibold">
+                              {candidate.firstName?.charAt(0)}{candidate.lastName?.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                              {candidate.firstName} {candidate.lastName}
+                            </span>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400">{candidate.candidateNumber}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-neutral-600 dark:text-neutral-400">
+                        {candidate.partyName || (candidate.isIndependent ? 'Independent' : '-')}
+                      </td>
+                      <td className="px-6 py-4 text-neutral-600 dark:text-neutral-400 capitalize">{candidate.position}</td>
+                      <td className="px-6 py-4 text-neutral-600 dark:text-neutral-400">{candidate.countyName || '-'}</td>
+                      <td className="px-6 py-4">{getStatusBadge(candidate.status)}</td>
+                      <td className="px-6 py-4 text-neutral-600 dark:text-neutral-400">
+                        {candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {candidate.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="success"
+                              onClick={() => setConfirmAction({ type: 'approve', id: candidate.id, name: `${candidate.firstName} ${candidate.lastName}` })}>
+                              Approve
+                            </Button>
+                            <Button size="sm" variant="danger"
+                              onClick={() => setConfirmAction({ type: 'reject', id: candidate.id, name: `${candidate.firstName} ${candidate.lastName}` })}>
+                              Reject
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
-      {/* Approve Modal */}
+      {pagination.total > pagination.limit && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" disabled={pagination.page <= 1}
+              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}>Previous</Button>
+            <Button variant="secondary" size="sm" disabled={pagination.page * pagination.limit >= pagination.total}
+              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}>Next</Button>
+          </div>
+        </div>
+      )}
+
       <Modal
-        isOpen={showApproveModal}
-        onClose={() => setShowApproveModal(false)}
-        title="Approve Candidate"
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        title={`${confirmAction?.type === 'approve' ? 'Approve' : 'Reject'} Candidate`}
         footer={
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setShowApproveModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="success" onClick={() => setShowApproveModal(false)}>
-              Approve Candidate
-            </Button>
+            <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+            <Button
+              variant={confirmAction?.type === 'approve' ? 'success' : 'danger'}
+              disabled={actionLoading}
+              onClick={handleAction}
+            >{actionLoading ? 'Processing...' : confirmAction?.type === 'approve' ? 'Approve' : 'Reject'}</Button>
           </div>
         }
       >
-        <p className="text-neutral-600">
-          Are you sure you want to approve <strong>{selectedCandidate?.name}</strong> as a candidate for <strong>{selectedCandidate?.position}</strong>?
+        <p className="text-neutral-600 dark:text-neutral-400">
+          Are you sure you want to {confirmAction?.type} <strong>{confirmAction?.name}</strong>?
         </p>
       </Modal>
     </div>

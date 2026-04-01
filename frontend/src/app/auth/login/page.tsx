@@ -59,22 +59,18 @@ export default function LoginPage() {
         userType: data.userType
       });
 
-      // Store user data in auth store
       storeLogin(response.user, response.token, response.expiresIn);
 
-      // Redirect based on role
       switch (response.user.role) {
         case 'voter':
           router.push('/voter/dashboard');
           break;
         case 'admin':
+        case 'super_admin':
           router.push('/admin/dashboard');
           break;
         case 'returning_officer':
           router.push('/ro/dashboard');
-          break;
-        case 'super_admin':
-          router.push('/admin/dashboard');
           break;
         default:
           router.push('/voter/dashboard');
@@ -87,15 +83,15 @@ export default function LoginPage() {
   };
 
   return (
-    <Card padding="lg" className="shadow-xl">
+    <Card padding="lg" className="shadow-xl dark:shadow-none dark:bg-neutral-800 dark:border-neutral-700">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-neutral-900 mb-2">Welcome Back</h2>
-        <p className="text-neutral-500">Sign in to access your voting dashboard</p>
+        <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Welcome Back</h2>
+        <p className="text-neutral-500 dark:text-neutral-400">Sign in to access your voting dashboard</p>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-error-light border-l-4 border-error rounded-r-lg">
-          <div className="flex items-center gap-2 text-error-dark">
+        <div className="mb-6 p-4 bg-error-light dark:bg-error-900/20 border-l-4 border-error rounded-r-lg">
+          <div className="flex items-center gap-2 text-error-dark dark:text-error-300">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
@@ -128,7 +124,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-[38px] text-neutral-400 hover:text-neutral-600"
+            className="absolute right-3 top-[38px] text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300"
           >
             {showPassword ? (
               <EyeSlashIcon className="w-5 h-5" />
@@ -142,14 +138,14 @@ export default function LoginPage() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              className="w-4 h-4 text-primary-500 border-neutral-300 rounded focus:ring-primary-500"
+              className="w-4 h-4 text-primary-500 border-neutral-300 dark:border-neutral-600 rounded focus:ring-primary-500 dark:bg-neutral-700"
               {...register('rememberMe')}
             />
-            <span className="text-sm text-neutral-600">Remember me</span>
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">Remember me</span>
           </label>
           <Link 
             href="/auth/forgot-password" 
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
           >
             Forgot password?
           </Link>
@@ -167,12 +163,12 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-8 pt-6 border-t border-neutral-200 text-center">
-        <p className="text-neutral-600">
+      <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700 text-center">
+        <p className="text-neutral-600 dark:text-neutral-400">
           Don't have an account?{' '}
           <Link 
             href="/auth/register" 
-            className="text-primary-600 hover:text-primary-700 font-semibold"
+            className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold"
           >
             Register to Vote
           </Link>
@@ -180,8 +176,8 @@ export default function LoginPage() {
       </div>
 
       {/* Demo Accounts */}
-      <div className="mt-6 p-4 bg-neutral-50 rounded-lg">
-        <p className="text-xs font-medium text-neutral-500 mb-2">Demo Accounts (click to auto-fill):</p>
+      <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg">
+        <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">Demo Accounts (click to auto-fill):</p>
         <div className="space-y-2">
           <button
             type="button"
@@ -190,10 +186,10 @@ export default function LoginPage() {
               setValue('password', 'Voter123456!');
               setValue('userType', 'voter');
             }}
-            className="w-full text-left text-xs p-2 rounded bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-colors"
+            className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
           >
-            <span className="font-medium text-neutral-700">Voter:</span>{' '}
-            <span className="text-neutral-500">voter@iebc.go.ke / Voter123456!</span>
+            <span className="font-medium text-neutral-700 dark:text-neutral-300">Voter:</span>{' '}
+            <span className="text-neutral-500 dark:text-neutral-400">voter@iebc.go.ke / Voter123456!</span>
           </button>
           <button
             type="button"
@@ -202,10 +198,10 @@ export default function LoginPage() {
               setValue('password', 'Admin123456!');
               setValue('userType', 'admin');
             }}
-            className="w-full text-left text-xs p-2 rounded bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-colors"
+            className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
           >
-            <span className="font-medium text-neutral-700">Admin:</span>{' '}
-            <span className="text-neutral-500">admin@iebc.go.ke / Admin123456!</span>
+            <span className="font-medium text-neutral-700 dark:text-neutral-300">Admin:</span>{' '}
+            <span className="text-neutral-500 dark:text-neutral-400">admin@iebc.go.ke / Admin123456!</span>
           </button>
           <button
             type="button"
@@ -214,10 +210,10 @@ export default function LoginPage() {
               setValue('password', 'Ro123456789!');
               setValue('userType', 'ro');
             }}
-            className="w-full text-left text-xs p-2 rounded bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-colors"
+            className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
           >
-            <span className="font-medium text-neutral-700">RO:</span>{' '}
-            <span className="text-neutral-500">ro@iebc.go.ke / Ro123456789!</span>
+            <span className="font-medium text-neutral-700 dark:text-neutral-300">RO:</span>{' '}
+            <span className="text-neutral-500 dark:text-neutral-400">ro@iebc.go.ke / Ro123456789!</span>
           </button>
         </div>
       </div>

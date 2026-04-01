@@ -10,10 +10,15 @@ import {
   KeyIcon,
   UserCircleIcon,
   DevicePhoneMobileIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  SunIcon,
+  MoonIcon,
+  ComputerDesktopIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 import { Card, Button, Input, Select, Badge } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/use-theme';
 
 // Mock settings data
 const initialSettings = {
@@ -46,6 +51,7 @@ const initialSettings = {
 };
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -82,8 +88,8 @@ export default function SettingsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Settings</h1>
-          <p className="text-neutral-500 mt-1">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Settings</h1>
+          <p className="text-neutral-500 dark:text-neutral-400 mt-1">
             Manage your system preferences and configurations
           </p>
         </div>
@@ -122,8 +128,8 @@ export default function SettingsPage() {
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left',
                   'transition-all duration-150',
                   activeTab === tab.id
-                    ? 'bg-admin-100 text-admin-700'
-                    : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                    ? 'bg-admin-100 text-admin-700 dark:bg-admin-900/50 dark:text-admin-300'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-200'
                 )}
               >
                 <tab.icon className="w-5 h-5" />
@@ -138,9 +144,9 @@ export default function SettingsPage() {
           {/* General Settings */}
           {activeTab === 'general' && (
             <Card>
-              <div className="p-6 border-b border-neutral-200">
-                <h2 className="text-lg font-semibold text-neutral-900">General Settings</h2>
-                <p className="text-sm text-neutral-500 mt-1">
+              <div className="p-6 border-b border-neutral-200 dark:border-neutral-700">
+                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">General Settings</h2>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                   Configure basic system information and preferences
                 </p>
               </div>
@@ -188,16 +194,16 @@ export default function SettingsPage() {
           {/* Notification Settings */}
           {activeTab === 'notifications' && (
             <Card>
-              <div className="p-6 border-b border-neutral-200">
-                <h2 className="text-lg font-semibold text-neutral-900">Notification Preferences</h2>
-                <p className="text-sm text-neutral-500 mt-1">
+              <div className="p-6 border-b border-neutral-200 dark:border-neutral-700">
+                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Notification Preferences</h2>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                   Manage how you receive notifications and alerts
                 </p>
               </div>
               <div className="p-6 space-y-6">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                    <DevicePhoneMobileIcon className="w-5 h-5 text-neutral-500" />
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                    <DevicePhoneMobileIcon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
                     Notification Channels
                   </h3>
                   <div className="space-y-3 ml-7">
@@ -208,8 +214,8 @@ export default function SettingsPage() {
                     ].map((item) => (
                       <div key={item.key} className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-neutral-900">{item.label}</p>
-                          <p className="text-sm text-neutral-500">{item.description}</p>
+                          <p className="font-medium text-neutral-900 dark:text-neutral-100">{item.label}</p>
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">{item.description}</p>
                         </div>
                         <button
                           onClick={() => updateSettings('notifications', item.key, !settings.notifications[item.key as keyof typeof settings.notifications])}
@@ -217,7 +223,7 @@ export default function SettingsPage() {
                             'relative w-12 h-6 rounded-full transition-colors',
                             settings.notifications[item.key as keyof typeof settings.notifications]
                               ? 'bg-admin-500'
-                              : 'bg-neutral-200'
+                              : 'bg-neutral-200 dark:bg-neutral-700'
                           )}
                         >
                           <span
@@ -234,9 +240,9 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-neutral-200 pt-6 space-y-4">
-                  <h3 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                    <BellIcon className="w-5 h-5 text-neutral-500" />
+                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-6 space-y-4">
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                    <BellIcon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
                     Alert Types
                   </h3>
                   <div className="space-y-3 ml-7">
@@ -247,8 +253,8 @@ export default function SettingsPage() {
                     ].map((item) => (
                       <div key={item.key} className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-neutral-900">{item.label}</p>
-                          <p className="text-sm text-neutral-500">{item.description}</p>
+                          <p className="font-medium text-neutral-900 dark:text-neutral-100">{item.label}</p>
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">{item.description}</p>
                         </div>
                         <button
                           onClick={() => updateSettings('notifications', item.key, !settings.notifications[item.key as keyof typeof settings.notifications])}
@@ -256,7 +262,7 @@ export default function SettingsPage() {
                             'relative w-12 h-6 rounded-full transition-colors',
                             settings.notifications[item.key as keyof typeof settings.notifications]
                               ? 'bg-admin-500'
-                              : 'bg-neutral-200'
+                              : 'bg-neutral-200 dark:bg-neutral-700'
                           )}
                         >
                           <span
@@ -279,16 +285,16 @@ export default function SettingsPage() {
           {/* Security Settings */}
           {activeTab === 'security' && (
             <Card>
-              <div className="p-6 border-b border-neutral-200">
-                <h2 className="text-lg font-semibold text-neutral-900">Security Settings</h2>
-                <p className="text-sm text-neutral-500 mt-1">
+              <div className="p-6 border-b border-neutral-200 dark:border-neutral-700">
+                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Security Settings</h2>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                   Configure security policies and access controls
                 </p>
               </div>
               <div className="p-6 space-y-6">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                    <ShieldCheckIcon className="w-5 h-5 text-neutral-500" />
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                    <ShieldCheckIcon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
                     Authentication
                   </h3>
                   <div className="space-y-3 ml-7">
@@ -298,8 +304,8 @@ export default function SettingsPage() {
                     ].map((item) => (
                       <div key={item.key} className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-neutral-900">{item.label}</p>
-                          <p className="text-sm text-neutral-500">{item.description}</p>
+                          <p className="font-medium text-neutral-900 dark:text-neutral-100">{item.label}</p>
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">{item.description}</p>
                         </div>
                         <button
                           onClick={() => updateSettings('security', item.key, !settings.security[item.key as keyof typeof settings.security])}
@@ -307,7 +313,7 @@ export default function SettingsPage() {
                             'relative w-12 h-6 rounded-full transition-colors',
                             settings.security[item.key as keyof typeof settings.security]
                               ? 'bg-admin-500'
-                              : 'bg-neutral-200'
+                              : 'bg-neutral-200 dark:bg-neutral-700'
                           )}
                         >
                           <span
@@ -324,9 +330,9 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-neutral-200 pt-6 space-y-4">
-                  <h3 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                    <KeyIcon className="w-5 h-5 text-neutral-500" />
+                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-6 space-y-4">
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                    <KeyIcon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
                     Session & Password
                   </h3>
                   <div className="grid md:grid-cols-2 gap-6 ml-7">
@@ -356,16 +362,16 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-neutral-200 pt-6 space-y-4">
-                  <h3 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                    <GlobeAltIcon className="w-5 h-5 text-neutral-500" />
+                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-6 space-y-4">
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                    <GlobeAltIcon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
                     Network Security
                   </h3>
                   <div className="ml-7">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-neutral-900">IP Whitelist</p>
-                        <p className="text-sm text-neutral-500">Restrict access to specific IP addresses</p>
+                        <p className="font-medium text-neutral-900 dark:text-neutral-100">IP Whitelist</p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400">Restrict access to specific IP addresses</p>
                       </div>
                       <button
                         onClick={() => updateSettings('security', 'ipWhitelist', !settings.security.ipWhitelist)}
@@ -373,7 +379,7 @@ export default function SettingsPage() {
                           'relative w-12 h-6 rounded-full transition-colors',
                           settings.security.ipWhitelist
                             ? 'bg-admin-500'
-                            : 'bg-neutral-200'
+                            : 'bg-neutral-200 dark:bg-neutral-700'
                         )}
                       >
                         <span
@@ -395,43 +401,60 @@ export default function SettingsPage() {
           {/* Appearance Settings */}
           {activeTab === 'appearance' && (
             <Card>
-              <div className="p-6 border-b border-neutral-200">
-                <h2 className="text-lg font-semibold text-neutral-900">Appearance</h2>
-                <p className="text-sm text-neutral-500 mt-1">
+              <div className="p-6 border-b border-neutral-200 dark:border-neutral-700">
+                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Appearance</h2>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                   Customize the look and feel of your dashboard
                 </p>
               </div>
               <div className="p-6 space-y-6">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
                     <PaintBrushIcon className="w-5 h-5 text-neutral-500" />
                     Theme
                   </h3>
                   <div className="grid md:grid-cols-3 gap-4 ml-7">
                     {[
-                      { value: 'light', label: 'Light', bg: 'bg-white', border: 'border-neutral-200' },
-                      { value: 'dark', label: 'Dark', bg: 'bg-neutral-900', border: 'border-neutral-700' },
-                      { value: 'system', label: 'System', bg: 'bg-gradient-to-r from-white to-neutral-900', border: 'border-neutral-300' },
-                    ].map((theme) => (
-                      <button
-                        key={theme.value}
-                        onClick={() => updateSettings('appearance', 'theme', theme.value)}
-                        className={cn(
-                          'p-4 rounded-xl border-2 transition-all text-left',
-                          settings.appearance.theme === theme.value
-                            ? 'border-admin-500 ring-2 ring-admin-100'
-                            : 'border-neutral-200 hover:border-neutral-300'
-                        )}
-                      >
-                        <div className={cn('w-full h-16 rounded-lg mb-3', theme.bg)} />
-                        <p className="font-medium text-neutral-900">{theme.label}</p>
-                      </button>
-                    ))}
+                      { value: 'light' as const, label: 'Light', icon: SunIcon, bg: 'bg-white dark:bg-neutral-800', border: 'border-neutral-200 dark:border-neutral-600' },
+                      { value: 'dark' as const, label: 'Dark', icon: MoonIcon, bg: 'bg-neutral-900', border: 'border-neutral-700' },
+                      { value: 'system' as const, label: 'System', icon: ComputerDesktopIcon, bg: 'bg-gradient-to-r from-white to-neutral-900 dark:from-neutral-800 dark:to-neutral-900', border: 'border-neutral-300 dark:border-neutral-600' },
+                    ].map((themeOption) => {
+                      const isActive = theme === themeOption.value;
+                      return (
+                        <button
+                          key={themeOption.value}
+                          onClick={() => setTheme(themeOption.value)}
+                          className={cn(
+                            'p-4 rounded-xl border-2 transition-all text-left relative',
+                            isActive
+                              ? 'border-admin-500 ring-2 ring-admin-100 dark:ring-admin-900'
+                              : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300 dark:hover:border-neutral-500'
+                          )}
+                        >
+                          {isActive && (
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-admin-500 rounded-full flex items-center justify-center">
+                              <CheckIcon className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                          <div className={cn('w-full h-16 rounded-lg mb-3 flex items-center justify-center', themeOption.bg)}>
+                            <themeOption.icon className={cn('w-6 h-6', themeOption.value === 'dark' ? 'text-neutral-400' : 'text-neutral-500')} />
+                          </div>
+                          <p className={cn('font-medium', themeOption.value === 'dark' ? 'text-neutral-100' : 'text-neutral-900 dark:text-neutral-100')}>
+                            {themeOption.label}
+                          </p>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                            {themeOption.value === 'light' && 'Always use light theme'}
+                            {themeOption.value === 'dark' && 'Always use dark theme'}
+                            {themeOption.value === 'system' && 'Follow system preference'}
+                          </p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="border-t border-neutral-200 pt-6 space-y-4">
-                  <h3 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
+                <div className="border-t border-neutral-200 dark:border-neutral-700 pt-6 space-y-4">
+                  <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
                     <Cog6ToothIcon className="w-5 h-5 text-neutral-500" />
                     Display Options
                   </h3>
@@ -442,8 +465,8 @@ export default function SettingsPage() {
                     ].map((item) => (
                       <div key={item.key} className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-neutral-900">{item.label}</p>
-                          <p className="text-sm text-neutral-500">{item.description}</p>
+                          <p className="font-medium text-neutral-900 dark:text-neutral-100">{item.label}</p>
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">{item.description}</p>
                         </div>
                         <button
                           onClick={() => updateSettings('appearance', item.key, !settings.appearance[item.key as keyof typeof settings.appearance])}
@@ -451,7 +474,7 @@ export default function SettingsPage() {
                             'relative w-12 h-6 rounded-full transition-colors',
                             settings.appearance[item.key as keyof typeof settings.appearance]
                               ? 'bg-admin-500'
-                              : 'bg-neutral-200'
+                              : 'bg-neutral-200 dark:bg-neutral-700'
                           )}
                         >
                           <span
