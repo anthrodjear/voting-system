@@ -12,25 +12,33 @@ import type { User, AuthResponse, ApiResponse } from '@/types';
 // ===========================================
 
 export interface LoginCredentials {
-  email: string;
+  identifier: string;
   password: string;
+  userType?: 'voter' | 'ro' | 'admin';
+}
+
+export interface BackendLoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  requiresMfa: boolean;
 }
 
 export interface RefreshTokenResponse {
-  token: string;
-  refreshToken: string;
+  accessToken: string;
   expiresIn: number;
 }
 
 export interface RegisterData {
-  email: string;
-  password: string;
+  nationalId: string;
   firstName: string;
   lastName: string;
-  phone?: string;
-  role?: 'voter' | 'returning_officer';
+  dateOfBirth: string;
   county?: string;
   constituency?: string;
+  ward?: string;
+  phoneNumber: string;
+  email?: string;
 }
 
 // ===========================================
@@ -38,25 +46,43 @@ export interface RegisterData {
 // ===========================================
 
 /**
- * Login with email and password
+ * Login with identifier (national ID for voters, email for RO/admin) and password
  */
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
   try {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
-    
-    // Store auth data in store
-    useAuthStore.getState().login(
-      response.user,
-      response.token,
-      response.expiresIn
-    );
-    
+    const response = await api.post<BackendLoginResponse>('/auth/login', credentials);
+
+    // Backend returns accessToken, not token - map it
+    const token = response.accessToken;
+    const expiresIn = response.expiresIn * 1000; // Convert seconds to ms
+
+    // Build user from token first (so we can store token immediately)
+    const user = buildUserFromToken(token, credentials.userType || 'voter');
+
+    // Store auth data in store BEFORE fetching profile (so interceptor can attach token)
+    useAuthStore.getState().login(user, token, expiresIn);
+
     // Store refresh token in localStorage for token refresh
     if (typeof window !== 'undefined') {
       localStorage.setItem('refreshToken', response.refreshToken);
     }
-    
-    return response;
+
+    // Try to fetch full user profile (now that token is stored)
+    try {
+      const profileResponse = await api.get<ApiResponse<User>>('/auth/me');
+      if (profileResponse.data) {
+        useAuthStore.getState().updateUser(profileResponse.data);
+      }
+    } catch {
+      // Profile fetch failed, but login still succeeds with token-based user
+    }
+
+    return {
+      user: useAuthStore.getState().user || user,
+      token,
+      refreshToken: response.refreshToken,
+      expiresIn,
+    };
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Login failed');
@@ -79,7 +105,7 @@ export async function logout(): Promise<void> {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('refreshToken');
     }
-    
+
     // Clear auth store
     useAuthStore.getState().logout();
   }
@@ -88,23 +114,29 @@ export async function logout(): Promise<void> {
 /**
  * Refresh access token
  */
-export async function refreshToken(): Promise<RefreshTokenResponse> {
+export async function refreshToken(): Promise<{ token: string; expiresIn: number }> {
   try {
-    const response = await api.post<RefreshTokenResponse>('/auth/refresh', {});
-    
-    // Update auth store with new token
-    useAuthStore.getState().login(
-      useAuthStore.getState().user!,
-      response.token,
-      response.expiresIn
-    );
-    
-    // Update refresh token in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('refreshToken', response.refreshToken);
+    const storedRefreshToken =
+      typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+
+    if (!storedRefreshToken) {
+      throw new Error('No refresh token available');
     }
-    
-    return response;
+
+    const response = await api.post<RefreshTokenResponse>('/auth/refresh', {
+      refreshToken: storedRefreshToken,
+    });
+
+    const token = response.accessToken;
+    const expiresIn = response.expiresIn * 1000;
+
+    // Update auth store with new token
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      useAuthStore.getState().login(currentUser, token, expiresIn);
+    }
+
+    return { token, expiresIn };
   } catch (error) {
     // If refresh fails, logout user
     useAuthStore.getState().logout();
@@ -118,13 +150,13 @@ export async function refreshToken(): Promise<RefreshTokenResponse> {
 export async function getCurrentUser(): Promise<User> {
   try {
     const response = await api.get<ApiResponse<User>>('/auth/me');
-    
+
     if (response.data) {
       // Update user in store
       useAuthStore.getState().updateUser(response.data);
       return response.data;
     }
-    
+
     throw new Error('Failed to fetch user');
   } catch (error) {
     if (error instanceof ApiException) {
@@ -135,25 +167,34 @@ export async function getCurrentUser(): Promise<User> {
 }
 
 /**
- * Register a new user
+ * Register a new voter
  */
 export async function register(data: RegisterData): Promise<AuthResponse> {
   try {
-    const response = await api.post<AuthResponse>('/auth/register', data);
-    
-    // Store auth data in store
-    useAuthStore.getState().login(
-      response.user,
-      response.token,
-      response.expiresIn
-    );
-    
-    // Store refresh token
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('refreshToken', response.refreshToken);
-    }
-    
-    return response;
+    const response = await api.post<ApiResponse<{ id: string }>>('/voters/register', data);
+
+    // Backend creates voter but doesn't auto-login
+    // Return a minimal response - user needs to login after registration
+    const mockUser: User = {
+      id: response.data?.id || '',
+      email: data.email || '',
+      role: 'voter',
+      firstName: data.firstName,
+      lastName: data.lastName,
+      phone: data.phoneNumber,
+      county: data.county,
+      constituency: data.constituency,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    return {
+      user: mockUser,
+      token: '',
+      refreshToken: '',
+      expiresIn: 0,
+    };
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Registration failed');
@@ -168,12 +209,12 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 export async function updateProfile(data: Partial<User>): Promise<User> {
   try {
     const response = await api.patch<ApiResponse<User>>('/auth/profile', data);
-    
+
     if (response.data) {
       useAuthStore.getState().updateUser(response.data);
       return response.data;
     }
-    
+
     throw new Error('Failed to update profile');
   } catch (error) {
     if (error instanceof ApiException) {
@@ -270,22 +311,47 @@ export async function resendVerificationEmail(): Promise<void> {
  */
 export async function validateSession(): Promise<boolean> {
   const { isAuthenticated, checkSession } = useAuthStore.getState();
-  
+
   if (!isAuthenticated) {
     return false;
   }
-  
+
   // Check if session is still valid (not expired)
   if (!checkSession()) {
     return false;
   }
-  
-  // Optionally verify with server
+
+  return true;
+}
+
+/**
+ * Build a minimal user object from JWT token claims
+ */
+function buildUserFromToken(token: string, userType: string): User {
   try {
-    await getCurrentUser();
-    return true;
+    // Decode JWT payload (base64)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return {
+      id: payload.sub || '',
+      email: payload.email || '',
+      role: userType === 'admin' ? 'super_admin' : (userType as User['role']),
+      firstName: '',
+      lastName: '',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
   } catch {
-    return false;
+    return {
+      id: '',
+      email: '',
+      role: 'voter',
+      firstName: '',
+      lastName: '',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
   }
 }
 

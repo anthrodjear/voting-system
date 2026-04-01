@@ -4,9 +4,24 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
+/**
+ * ReturningOfficer Entity - Election returning officers
+ * 
+ * Database Optimization Notes:
+ * - Index on national_id (unique constraint automatically creates btree index)
+ * - Index on email (unique constraint automatically creates btree index)
+ * - Index on assigned_county_id for特定county的RO查询
+ * - Index on status forRO状态过滤
+ */
 @Entity('returning_officers')
+@Index('idx_ro_national', ['nationalId'], { unique: true })
+@Index('idx_ro_email', ['email'], { unique: true })
+@Index('idx_ro_assigned_county', ['assignedCountyId'])
+@Index('idx_ro_status', ['status'])
+@Index('idx_ro_level', ['level'])
 export class ReturningOfficer {
   @PrimaryGeneratedColumn('uuid')
   id: string;

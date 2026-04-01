@@ -6,13 +6,32 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { County } from './county.entity';
 import { Constituency } from './constituency.entity';
 import { Ward } from './ward.entity';
 import { Election } from './election.entity';
 
+/**
+ * Candidate Entity - Candidate information for various positions
+ * 
+ * Database Optimization Notes:
+ * - Index on candidate_number (unique constraint automatically creates btree index)
+ * - Index on position for快速position类型筛选
+ * - Index on status for快速审批状态查询
+ * - Index on election_id for特定选举的候选人查询
+ * - 复合索引 on (election_id, position) for选举中的position分类查询
+ * - FK indexes on county_id, constituency_id, ward_id created by ManyToOne relationships
+ */
 @Entity('candidates')
+@Index('idx_candidates_position', ['position'])
+@Index('idx_candidates_status', ['status'])
+@Index('idx_candidates_election', ['electionId'])
+@Index('idx_candidates_election_position', ['electionId', 'position'])
+@Index('idx_candidates_county', ['countyId'])
+@Index('idx_candidates_constituency', ['constituencyId'])
+@Index('idx_candidates_ward', ['wardId'])
 export class Candidate {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -86,18 +105,30 @@ export class Candidate {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
+  /**
+   * Relationship: Candidate belongs to one County (optional - for Governor/Senator)
+   */
   @ManyToOne(() => County, { nullable: true })
   @JoinColumn({ name: 'county_id' })
   county: County;
 
+  /**
+   * Relationship: Candidate belongs to one Constituency (optional - for MP/MCA)
+   */
   @ManyToOne(() => Constituency, { nullable: true })
   @JoinColumn({ name: 'constituency_id' })
   constituency: Constituency;
 
+  /**
+   * Relationship: Candidate belongs to one Ward (optional - for MCA)
+   */
   @ManyToOne(() => Ward, { nullable: true })
   @JoinColumn({ name: 'ward_id' })
   ward: Ward;
 
+  /**
+   * Relationship: Candidate belongs to one Election (optional)
+   */
   @ManyToOne(() => Election, { nullable: true })
   @JoinColumn({ name: 'election_id' })
   election: Election;

@@ -73,17 +73,18 @@ export async function checkIdAvailability(nationalId: string): Promise<boolean> 
 
 /**
  * Fetch voter data from NIIF (National Integrated Identity Management)
+ * NOTE: Placeholder - no backend endpoint exists yet for NIIF lookup
  */
 export async function lookupNiif(nationalId: string): Promise<NiifLookupResult> {
   try {
     const response = await api.get<ApiResponse<NiifLookupResult>>(
       `/voters/lookup-niif/${nationalId}`
     );
-    
+
     if (response.data) {
       return response.data;
     }
-    
+
     return { found: false };
   } catch (error) {
     if (error instanceof ApiException) {
@@ -141,17 +142,24 @@ export async function getProfile(): Promise<VoterProfile> {
 
 /**
  * Get voter registration status
+ * NOTE: Derives status from /voters/profile since /voters/registration-status doesn't exist
  */
 export async function getRegistrationStatus(): Promise<RegistrationStatusResponse> {
   try {
-    const response = await api.get<ApiResponse<RegistrationStatusResponse>>(
-      '/voters/registration-status'
+    const response = await api.get<ApiResponse<VoterProfile>>(
+      '/voters/profile'
     );
-    
+
     if (response.data) {
-      return response.data;
+      const profile = response.data;
+      return {
+        status: profile.registrationStatus || profile.status || 'not_registered',
+        message: profile.registrationMessage,
+        registeredAt: profile.registeredAt,
+        verifiedAt: profile.verifiedAt,
+      };
     }
-    
+
     return { status: 'not_registered' };
   } catch (error) {
     if (error instanceof ApiException) {

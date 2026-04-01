@@ -57,7 +57,7 @@ export interface PendingVote {
 export async function joinBatch(electionId: string): Promise<Batch> {
   try {
     const response = await api.post<ApiResponse<Batch>>(
-      '/votes/batch/join',
+      '/batches/join',
       { electionId }
     );
     
@@ -80,7 +80,7 @@ export async function joinBatch(electionId: string): Promise<Batch> {
 export async function getBatchStatus(batchId: string): Promise<BatchStatusResponse> {
   try {
     const response = await api.get<ApiResponse<BatchStatusResponse>>(
-      `/votes/batch/${batchId}/status`
+      `/batches/${batchId}/status`
     );
     
     if (response.data) {
@@ -104,7 +104,7 @@ export async function getBatchStatus(batchId: string): Promise<BatchStatusRespon
  */
 export async function leaveBatch(batchId: string): Promise<void> {
   try {
-    await api.post(`/votes/batch/${batchId}/leave`);
+    await api.post(`/batches/${batchId}/leave`);
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to leave batch');
@@ -119,7 +119,7 @@ export async function leaveBatch(batchId: string): Promise<void> {
 export async function submitVote(voteData: VoteData): Promise<VoteConfirmation> {
   try {
     const response = await api.post<ApiResponse<VoteConfirmation>>(
-      '/votes/submit',
+      '/votes/cast',
       voteData
     );
     
@@ -163,11 +163,12 @@ export async function getConfirmation(confirmationId: string): Promise<VoteConfi
 
 /**
  * Get vote receipt
+ * NOTE: Uses /votes/status endpoint since /votes/receipt doesn't exist
  */
 export async function getVoteReceipt(electionId: string): Promise<VoteReceipt | null> {
   try {
     const response = await api.get<ApiResponse<VoteReceipt>>(
-      `/votes/receipt/${electionId}`
+      `/votes/status/${electionId}`
     );
     
     if (response.data) {
@@ -192,7 +193,7 @@ export async function getVoteReceipt(electionId: string): Promise<VoteReceipt | 
 export async function hasVoted(electionId: string): Promise<boolean> {
   try {
     const response = await api.get<ApiResponse<{ voted: boolean }>>(
-      `/votes/check/${electionId}`
+      `/votes/status/${electionId}`
     );
     
     return response.data?.voted ?? false;
@@ -251,7 +252,7 @@ export async function getVotingProgress(
         voted: number;
         turnout: number;
       }>;
-    }>>(`/votes/progress/${electionId}`, { params });
+    }>>(`/reports/turnout`, { params });
     
     return response.data || {
       totalRegistered: 0,
@@ -284,7 +285,7 @@ export async function verifyVoteOnChain(
       blockNumber?: number;
       txHash?: string;
       timestamp?: string;
-    }>>(`/votes/verify/${confirmationId}`);
+    }>>(`/reports/blockchain/status`);
     
     return response.data || { verified: false };
   } catch (error) {
@@ -332,7 +333,7 @@ export async function getLiveResults(electionId: string): Promise<{
           percentage: number;
         }>;
       }>;
-    }>>(`/votes/results/${electionId}`);
+    }>>(`/reports/results`);
     
     return response.data || {
       totalVotes: 0,
@@ -356,10 +357,10 @@ export async function requestBallot(electionId: string): Promise<{
   expiresAt: string;
 }> {
   try {
-    const response = await api.post<ApiResponse<{
+    const response = await api.get<ApiResponse<{
       ballotId: string;
       expiresAt: string;
-    }>>(`/votes/ballot/request`, { electionId });
+    }>>(`/votes/ballot`);
     
     if (response.data) {
       return response.data;
@@ -401,5 +402,4 @@ export default {
   verifyVoteOnChain,
   getLiveResults,
   requestBallot,
-  cancelBallotRequest,
 };

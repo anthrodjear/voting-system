@@ -114,21 +114,66 @@ export class AdminController {
   }
 
   // Presidential Candidates
-  @Post('presidential')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('super_admin', 'admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Add presidential candidate' })
-  @ApiResponse({ status: 201, description: 'Candidate created' })
-  async createPresidentialCandidate(
-    @Body() dto: CreatePresidentialCandidateDto,
-    @CurrentUser('id') userId: string,
-  ): Promise<{ success: boolean; data: any }> {
-    const result = await this.adminService.createPresidentialCandidate(dto, userId);
+    @Post('presidential')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('super_admin', 'admin')
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Add presidential candidate' })
+    @ApiResponse({ status: 201, description: 'Candidate created' })
+    async createPresidentialCandidate(
+        @Body() dto: CreatePresidentialCandidateDto,
+        @CurrentUser('id') userId: string,
+    ): Promise<{ success: boolean; data: any }> {
+        const result = await this.adminService.createPresidentialCandidate(dto, userId);
 
-    return {
-      success: true,
-      data: result,
-    };
-  }
+        return {
+            success: true,
+            data: result,
+        };
+    }
+
+    @Get('dashboard/stats')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get dashboard statistics' })
+    @ApiResponse({ status: 200, description: 'Dashboard statistics' })
+    async getDashboardStats(): Promise<{ success: boolean; data: any }> {
+        const stats = await this.adminService.getDashboardStats();
+
+        return {
+            success: true,
+            data: stats,
+        };
+    }
+
+    @Get('dashboard/activity')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get recent activity feed' })
+    @ApiResponse({ status: 200, description: 'Activity feed' })
+    async getActivityFeed(): Promise<{ success: boolean; data: any }> {
+        const activity = await this.adminService.getActivityFeed();
+
+        return {
+            success: true,
+            data: activity,
+        };
+    }
+
+    @Get('returning-officers')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('super_admin', 'admin')
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'List returning officers' })
+    @ApiResponse({ status: 200, description: 'Returning officers list' })
+    async getReturningOfficers(
+        @Query() query?: any,
+    ): Promise<{ success: boolean; data: any }> {
+        const result = await this.adminService.findAllReturningOfficers(query);
+
+        return {
+            success: true,
+            data: result,
+        };
+    }
 }

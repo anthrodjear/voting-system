@@ -33,7 +33,7 @@ export default function VoterLayout({ children }: VoterLayoutProps) {
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/login';
+    window.location.href = '/auth/login';
   };
 
   return (

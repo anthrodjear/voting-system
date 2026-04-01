@@ -14,61 +14,64 @@ import {
 import { Card, Badge, Progress, Button } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatDate } from '@/lib/utils';
-
-// Mock upcoming elections data
-const upcomingElections = [
-  {
-    id: '1',
-    name: 'General Election 2027',
-    type: 'General',
-    status: 'registration_open' as const,
-    registrationDeadline: '2027-06-15',
-    votingStart: '2027-08-08',
-    votingEnd: '2027-08-09',
-  },
-  {
-    id: '2',
-    name: 'Nairobi Gubernatorial By-election',
-    type: 'By-election',
-    status: 'published' as const,
-    registrationDeadline: '2027-03-01',
-    votingStart: '2027-04-15',
-    votingEnd: '2027-04-16',
-  },
-];
-
-// Mock notifications
-const notifications = [
-  {
-    id: '1',
-    type: 'info',
-    title: 'Registration Reminder',
-    message: 'Remember to complete your voter registration before the deadline.',
-    createdAt: new Date().toISOString(),
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'success',
-    title: 'Profile Updated',
-    message: 'Your profile information has been verified successfully.',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    read: true,
-  },
-];
+import { getRegistrationStatus, getUpcomingElections } from '@/services';
+import { useState, useEffect } from 'react';
 
 export default function VoterDashboardPage() {
   const { user } = useAuthStore();
-  
-  // Mock registration status
-  const registrationStatus = {
-    status: 'verified' as const,
-    verifiedAt: '2027-01-15',
-  };
+  const [registrationStatus, setRegistrationStatus] = useState<{ status: string }>({ status: 'not_registered' });
+  const [upcomingElections, setUpcomingElections] = useState<Array<any>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Array<any>>([]);
 
-  const daysUntilElection = Math.ceil(
-    (new Date('2027-08-08').getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
+  // Fetch data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch registration status
+        const statusResponse = await getRegistrationStatus();
+        setRegistrationStatus(statusResponse);
+        
+        // Fetch upcoming elections
+        const electionsResponse = await getUpcomingElections();
+        setUpcomingElections(electionsResponse);
+        
+        // For now, use mock notifications until we have a real notifications API
+        setNotifications([
+          {
+            id: '1',
+            type: 'info',
+            title: 'Registration Reminder',
+            message: 'Remember to complete your voter registration before the deadline.',
+            createdAt: new Date().toISOString(),
+            read: false,
+          },
+          {
+            id: '2',
+            type: 'success',
+            title: 'Profile Updated',
+            message: 'Your profile information has been verified successfully.',
+            createdAt: new Date(Date.now() - 86400000).toISOString(),
+            read: true,
+          },
+        ]);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  // Calculate days until next election
+  const daysUntilElection = upcomingElections.length > 0 
+    ? Math.ceil((new Date(upcomingElections[0].votingStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   return (
     <div className="space-y-6">

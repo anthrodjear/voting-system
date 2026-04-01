@@ -12,7 +12,7 @@ RUN apk add --no-cache python3 make g++ git
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # =============================================================================
 # Stage 2: Development - Watch mode with hot reload
@@ -82,27 +82,14 @@ USER nodejs
 # Expose the application port
 EXPOSE 3001
 
+# Install wget for health check
+USER root
+RUN apk add --no-cache wget
+USER nodejs
+
 # Health check configuration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD node -e "
-        const http = require('http');
-        const options = {
-            hostname: 'localhost',
-            port: 3001,
-            path: '/health',
-            method: 'GET',
-            timeout: 5000
-        };
-        const req = http.request(options, (res) => {
-            process.exit(res.statusCode === 200 ? 0 : 1);
-        });
-        req.on('error', () => process.exit(1));
-        req.on('timeout', () => {
-            req.destroy();
-            process.exit(1);
-        });
-        req.end();
-    "
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
 
 # Start the application
 CMD ["node", "dist/main.js"]

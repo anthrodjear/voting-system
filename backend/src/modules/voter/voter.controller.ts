@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
@@ -38,6 +39,64 @@ export class VoterController {
       success: true,
       data: result,
     };
+  }
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin', 'ro')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get voter statistics' })
+  @ApiResponse({ status: 200, description: 'Voter statistics' })
+  async getStats(): Promise<{ success: boolean; data: any }> {
+    const stats = await this.voterService.getStats();
+
+    return {
+      success: true,
+      data: stats,
+    };
+  }
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current voter profile' })
+  @ApiResponse({ status: 200, description: 'Voter profile' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProfile(
+    @CurrentUser('id') voterId: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const voter = await this.voterService.findById(voterId);
+
+    // Exclude sensitive fields from response
+    const { passwordHash, passwordChangedAt, failedLoginAttempts, lockedAt, ...safeVoter } = voter;
+
+    return {
+      success: true,
+      data: safeVoter,
+    };
+  }
+
+  @Get('check-id/:nationalId')
+  @ApiOperation({ summary: 'Check if National ID is available' })
+  @ApiResponse({ status: 200, description: 'National ID availability' })
+  async checkNationalId(
+    @Param('nationalId') nationalId: string,
+  ): Promise<{ success: boolean; data: { available: boolean } }> {
+    try {
+      await this.voterService.findByNationalId(nationalId);
+      return {
+        success: true,
+        data: { available: false },
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return {
+          success: true,
+          data: { available: true },
+        };
+      }
+      throw error;
+    }
   }
 
   @Get(':id')

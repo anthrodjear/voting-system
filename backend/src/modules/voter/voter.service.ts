@@ -220,6 +220,30 @@ export class VoterService {
     };
   }
 
+  async getStats(county?: string): Promise<{ total: number; registered: number; verified: number; pending: number; byCounty: any[] }> {
+    const baseWhere = county ? { countyName: county } : {};
+
+    const total = await this.voterRepository.count({ where: baseWhere });
+    const registered = await this.voterRepository.count({ where: { ...baseWhere, status: 'registered' } as any });
+    const verified = await this.voterRepository.count({ where: { ...baseWhere, status: 'verified' } as any });
+    const pending = await this.voterRepository.count({ where: { ...baseWhere, status: 'pending' } as any });
+
+    const byCounty = await this.voterRepository
+      .createQueryBuilder('voter')
+      .select('voter.county_name', 'county')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('voter.county_name')
+      .getRawMany();
+
+    return {
+      total,
+      registered,
+      verified,
+      pending,
+      byCounty,
+    };
+  }
+
   async getStatus(id: string): Promise<{ voterId: string; status: string; idVerified: boolean; faceEnrolled: boolean; fingerprintEnrolled: boolean; verifiedAt?: Date }> {
     const voter = await this.findById(id);
 

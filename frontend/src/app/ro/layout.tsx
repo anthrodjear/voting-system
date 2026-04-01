@@ -33,7 +33,7 @@ export default function ROLayout({ children }: ROLayoutProps) {
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/login';
+    window.location.href = '/auth/login';
   };
 
   // Mock county data

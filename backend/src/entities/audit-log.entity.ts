@@ -6,11 +6,30 @@ import {
   Index,
 } from 'typeorm';
 
+/**
+ * AuditLog Entity - Comprehensive audit trail for all system actions
+ * 
+ * Database Optimization Notes (Critical for compliance and security):
+ * - Index on user_id for特定用户的操作审计
+ * - Index on action for操作类型筛选
+ * - Index on resource for资源类型筛选  
+ * - Index on created_at for日期范围查询 (最常用的查询模式)
+ * - 复合索引 on (user_id, created_at DESC) for用户最近操作
+ * - 使用 BRIN 索引 (PostgreSQL 14+): CREATE INDEX USING BRIN (created_at)
+ * 
+ * GDPR/Compliance Notes:
+ * - 此表存储敏感操作记录,需要考虑数据保护
+ * - 建议加密存储 sensitive columns (old_value, new_value)
+ * - 归档策略: 将超过2年的审计记录转移到冷存储
+ */
 @Entity('audit_logs')
 @Index('idx_audit_user', ['userId'])
+@Index('idx_audit_user_created', ['userId', 'createdAt'])
 @Index('idx_audit_action', ['action'])
 @Index('idx_audit_resource', ['resource'])
+@Index('idx_audit_resource_id', ['resourceId'])
 @Index('idx_audit_created', ['createdAt'])
+@Index('idx_audit_status', ['status'])
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;

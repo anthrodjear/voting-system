@@ -4,9 +4,21 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
+/**
+ * Batch Entity - Batch processing for votes (offline voting)
+ * 
+ * Database Optimization Notes:
+ * - Index on batch_id (unique constraint automatically creates btree index)
+ * - Index on election_id for特定选举的批次查询
+ * - Index on status for批次状态过滤
+ */
 @Entity('batches')
+@Index('idx_batch_election', ['electionId'])
+@Index('idx_batch_status', ['status'])
+@Index('idx_batch_batch_id', ['batchId'], { unique: true })
 export class Batch {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -41,7 +53,7 @@ export class Batch {
   @Column({ name: 'blockchain_tx_hash', length: 100, nullable: true })
   blockchainTxHash: string;
 
-  @Column({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })

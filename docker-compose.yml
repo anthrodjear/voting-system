@@ -1,4 +1,20 @@
-version: '3.8'
+# =============================================================================
+# Voting System Docker Compose
+# =============================================================================
+# 
+# Services:
+# - postgres: PostgreSQL 15 database
+# - redis: Redis 7 cache
+# - rabbitmq: RabbitMQ message queue
+# - backend: NestJS API server
+# - frontend: Next.js frontend
+#
+# Usage:
+#   docker-compose up -d          # Start all services
+#   docker-compose down           # Stop all services
+#   docker-compose logs -f        # View logs
+#   docker-compose ps             # Check status
+# =============================================================================
 
 services:
   # PostgreSQL Database
@@ -35,12 +51,13 @@ services:
       - redis_data:/data
     networks:
       - voting-network
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
 
   # RabbitMQ Message Queue
   rabbitmq:
@@ -59,9 +76,39 @@ services:
       - voting-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 30s
+
+  # Hyperledger Besu Node (Optional - for blockchain features)
+  besu:
+    image: hyperledger/besu:23.10.2
+    container_name: voting-besu
+    restart: unless-stopped
+    ports:
+      - "8545:8545"  # JSON-RPC
+      - "8546:8546"  # WebSocket
+      - "30303:30303"  # P2P
+    environment:
+      BESU_NETWORK: dev
+      BESU_MINER_ENABLED: true
+      BESU_MINER_COINBASE: "0x0000000000000000000000000000000000000000"
+      BESU_RPC_HTTP_HOST: "0.0.0.0"
+      BESU_RPC_WS_HOST: "0.0.0.0"
+      BESU_LOGGING: "INFO"
+    volumes:
+      - besu_data:/var/lib/besu/data
+    networks:
+      - voting-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8545"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    profiles:
+      - blockchain
 
   # Backend API (NestJS)
   backend:
@@ -71,11 +118,13 @@ services:
       target: development
     container_name: voting-backend
     restart: unless-stopped
+    env_file:
+      - .env.docker
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: ${BACKEND_PORT:-3001}
       
-      # Database Configuration
+      # Database Configuration (these override .env.docker for Docker networking)
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USERNAME: ${DB_USERNAME:-postgres}
@@ -101,17 +150,19 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       
       # Throttler Configuration
-      THROTTLE_TTL: 60000
-      THROTTLE_LIMIT: 1000
+      THROTTLE_TTL: ${THROTTLE_TTL:-60000}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-1000}
       
       # CORS Configuration
       CORS_ORIGIN: ${FRONTEND_URL:-http://localhost:3000}
+      
+      # Required Infrastructure for Health Checks
+      REQUIRED_INFRASTRUCTURE: database,redis
     ports:
       - "${BACKEND_PORT:-3001}:3001"
     volumes:
       - ./backend:/app
       - /app/node_modules
-      - /app/dist
     networks:
       - voting-network
     depends_on:
@@ -122,11 +173,17 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/v1/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
 
   # Frontend (Next.js)
   frontend:
@@ -137,10 +194,10 @@ services:
     container_name: voting-frontend
     restart: unless-stopped
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       
       # Next.js Configuration
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/v1}
       APP_NAME: ${APP_NAME:-IEBC Voting System}
       
       # Development Options
@@ -162,12 +219,24 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
 
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
   voting-network:
     driver: bridge
     name: voting-network
 
+# =============================================================================
+# Volumes (Persistent Data)
+# =============================================================================
 volumes:
   postgres_data:
     name: voting-postgres-data
@@ -175,3 +244,5 @@ volumes:
     name: voting-redis-data
   rabbitmq_data:
     name: voting-rabbitmq-data
+  besu_data:
+    name: voting-besu-data

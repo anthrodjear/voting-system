@@ -4,9 +4,19 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
+/**
+ * SuperAdmin Entity - System administrators with elevated privileges
+ * 
+ * Database Optimization Notes:
+ * - Index on email (unique constraint automatically creates btree index)
+ * - Index on is_active for管理员状态查询
+ */
 @Entity('super_admins')
+@Index('idx_superadmin_email', ['email'], { unique: true })
+@Index('idx_superadmin_active', ['isActive'])
 export class SuperAdmin {
   @PrimaryGeneratedColumn('uuid')
   id: string;

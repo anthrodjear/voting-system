@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Button, Input, Card, StepIndicator, Alert } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { checkIdAvailability, lookupNiif, register as registerVoter, enrollBiometrics } from '@/services';
 
 const steps = [
   { label: 'National ID', icon: DocumentTextIcon },
@@ -80,45 +81,90 @@ export default function VoterRegistrationPage() {
     resolver: zodResolver(step3Schema),
   });
 
-  const handleStep1Submit = async (data: Step1Data) => {
-    setIsLoading(true);
-    try {
-      // Simulate ID verification
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setStep1Data(data);
-      setIdVerified(true);
-      setCurrentStep(1);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+   const handleStep1Submit = async (data: Step1Data) => {
+     setIsLoading(true);
+     try {
+       // Check if ID is available
+       const isAvailable = await checkIdAvailability(data.nationalId);
+       if (isAvailable) {
+         // Lookup NIIF data (placeholder function)
+         const niifData = await lookupNiif(data.nationalId);
+         setStep1Data(data);
+         setIdVerified(true);
+         setCurrentStep(1);
+       } else {
+         throw new Error('National ID is already registered');
+       }
+     } catch (error: any) {
+       throw new Error(error.message || 'ID verification failed');
+     } finally {
+       setIsLoading(false);
+     }
+   };
 
   const handleStep2Submit = async (data: Step2Data) => {
     setStep2Data(data);
     setCurrentStep(2);
   };
 
-  const handleStep3Submit = async (data: Step3Data) => {
-    setIsLoading(true);
-    try {
-      // Simulate final registration
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setCurrentStep(3);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+   const handleStep3Submit = async (data: Step3Data) => {
+     setIsLoading(true);
+     try {
+       // Combine all step data for final registration
+       const voterData = {
+         nationalId: step1Data?.nationalId || '',
+         firstName: step2Data?.firstName || '',
+         lastName: step2Data?.lastName || '',
+         dateOfBirth: step2Data?.dateOfBirth || '',
+         county: step2Data?.county || '',
+         constituency: step2Data?.constituency || '',
+         ward: step2Data?.ward || '',
+         phoneNumber: step2Data?.phone || '',
+         email: step2Data?.email || '',
+         // Mock biometric data for now (in real implementation, this would come from actual biometric capture)
+         faceTemplate: 'mock_face_template_data',
+         fingerprints: [
+           { finger: 'left_thumb', template: 'mock_left_thumb_template', quality: 85 },
+           { finger: 'right_thumb', template: 'mock_right_thumb_template', quality: 90 }
+         ],
+         password: data.password,
+         securityQuestions: [
+           { questionId: 'q1', answer: data.securityAnswer1 }
+         ]
+       };
+       
+       // Call the actual voter registration service
+       await registerVoter(voterData);
+       
+       // Update steps to show completion
+       setCurrentStep(3);
+     } catch (error: any) {
+       throw new Error(error.message || 'Registration failed');
+     } finally {
+       setIsLoading(false);
+     }
+   };
 
-  const handleBiometricCapture = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate biometric capture
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setBiometricsCaptured(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+   const handleBiometricCapture = async () => {
+     setIsLoading(true);
+     try {
+       // Mock biometric capture data (in real implementation, this would come from device cameras/sensors)
+       const faceTemplate = 'mock_face_template_from_camera';
+       const fingerprints = [
+         { finger: 'left_thumb', template: 'mock_left_thumb_from_scanner', quality: 88 },
+         { finger: 'right_thumb', template: 'mock_right_thumb_from_scanner', quality: 92 }
+       ];
+       
+       // Call the actual biometric enrollment service
+       await enrollBiometrics(faceTemplate, fingerprints);
+       
+       setBiometricsCaptured(true);
+     } catch (error: any) {
+       throw new Error(error.message || 'Biometric capture failed');
+     } finally {
+       setIsLoading(false);
+     }
+   };
 
   const renderStepContent = () => {
     switch (currentStep) {

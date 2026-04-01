@@ -12,6 +12,8 @@ import { ReturningOfficer } from '../../entities/returning-officer.entity';
 import { Candidate } from '../../entities/candidate.entity';
 import { PresidentialCandidate } from '../../entities/presidential-candidate.entity';
 import { AuditLog } from '../../entities/audit-log.entity';
+import { Voter } from '../../entities/voter.entity';
+import { Vote } from '../../entities/vote.entity';
 import {
   CreateCountyDto,
   RoApplicationDto,
@@ -41,6 +43,10 @@ export class AdminService {
     private presidentialRepository: Repository<PresidentialCandidate>,
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
+    @InjectRepository(Voter)
+    private voterRepository: Repository<Voter>,
+    @InjectRepository(Vote)
+    private voteRepository: Repository<Vote>,
   ) {}
 
   // County Management
@@ -197,49 +203,128 @@ export class AdminService {
     };
   }
 
-  // Presidential Candidate Management
-  async createPresidentialCandidate(dto: CreatePresidentialCandidateDto, userId: string): Promise<any> {
-    // First create the base candidate
-    const candidateNumber = `PRES${Math.floor(Math.random() * 9000) + 1000}`;
+    // Presidential Candidate Management
+    async createPresidentialCandidate(dto: CreatePresidentialCandidateDto, userId: string): Promise<any> {
+        // First create the base candidate
+        const candidateNumber = `PRES${Math.floor(Math.random() * 9000) + 1000}`;
 
-    const candidate = await this.candidateRepository.save({
-      candidateNumber,
-      firstName: dto.fullName.split(' ')[0],
-      lastName: dto.fullName.split(' ').slice(1).join(' ') || '',
-      position: 'president',
-      partyName: dto.party,
-      partyAbbreviation: dto.party?.slice(0, 3).toUpperCase(),
-      dateOfBirth: new Date(dto.dateOfBirth),
-      photo: dto.photo,
-      manifesto: dto.manifesto,
-      status: 'approved',
-      approvedAt: new Date(),
-      approvedBy: userId,
-    });
+        const candidate = await this.candidateRepository.save({
+            candidateNumber,
+            firstName: dto.fullName.split(' ')[0],
+            lastName: dto.fullName.split(' ').slice(1).join(' ') || '',
+            position: 'president',
+            partyName: dto.party,
+            partyAbbreviation: dto.party?.slice(0, 3).toUpperCase(),
+            dateOfBirth: new Date(dto.dateOfBirth),
+            photo: dto.photo,
+            manifesto: dto.manifesto,
+            status: 'approved',
+            approvedAt: new Date(),
+            approvedBy: userId,
+        });
 
-    // Create presidential candidate record
-    await this.presidentialRepository.save({
-      candidateId: candidate.id,
-      deputyFullName: dto.deputyName,
-      deputyDateOfBirth: dto.deputyDateOfBirth ? new Date(dto.deputyDateOfBirth) : undefined,
-      nominationDate: new Date(),
-      nominationCounty: 'Nairobi',
-      nominatorCount: 1,
-      campaignSlogan: dto.campaignSlogan,
-    });
+        // Create presidential candidate record
+        await this.presidentialRepository.save({
+            candidateId: candidate.id,
+            deputyFullName: dto.deputyName,
+            deputyDateOfBirth: dto.deputyDateOfBirth ? new Date(dto.deputyDateOfBirth) : undefined,
+            nominationDate: new Date(),
+            nominationCounty: 'Nairobi',
+            nominatorCount: 1,
+            campaignSlogan: dto.campaignSlogan,
+        });
 
-    await this.auditLogRepository.save({
-      userId,
-      userRole: 'admin',
-      action: 'presidential_candidate_created',
-      resource: 'candidate',
-      resourceId: candidate.id,
-      newValue: dto,
-    });
+        await this.auditLogRepository.save({
+            userId,
+            userRole: 'admin',
+            action: 'presidential_candidate_created',
+            resource: 'candidate',
+            resourceId: candidate.id,
+            newValue: dto,
+        });
 
-    return {
-      candidateId: candidate.id,
-      status: 'approved',
-    };
-  }
+        return {
+            candidateId: candidate.id,
+            status: 'approved',
+        };
+    }
+
+    async getDashboardStats(): Promise<any> {
+        const [votersCount, countiesCount, roCount, votesCount] = await Promise.all([
+            this.voterRepository.count(),
+            this.countyRepository.count({ where: { isActive: true } }),
+            this.roRepository.count({ where: { status: 'approved' } }),
+            this.voteRepository.count({ where: { status: 'confirmed' } }),
+        ]);
+
+        return {
+            voters: votersCount,
+            counties: countiesCount,
+            returningOfficers: roCount,
+            votes: votesCount,
+        };
+    }
+
+    async getActivityFeed(limit: number = 10): Promise<any[]> {
+        const logs = await this.auditLogRepository.find({
+            order: { createdAt: 'DESC' },
+            take: limit,
+        });
+
+        return logs.map(log => ({
+            id: log.id,
+            userId: log.userId,
+            userRole: log.userRole,
+            action: log.action,
+            resource: log.resource,
+            resourceId: log.resourceId,
+            timestamp: log.createdAt,
+            status: log.status,
+        }));
+    }
+
+    async findAllReturningOfficers(query?: any): Promise<{ officers: any[]; pagination: any }> {
+        const { page = 1, limit = 20, county, status } = query || {};
+
+        const queryBuilder = this.roRepository.createQueryBuilder('ro');
+
+        if (county) {
+            queryBuilder.andWhere('ro.assignedCountyName = :county', { county });
+        }
+
+        if (status) {
+            queryBuilder.andWhere('ro.status = :status', { status });
+        }
+
+        const total = await queryBuilder.getCount();
+        const officers = await queryBuilder
+            .skip((page - 1) * limit)
+            .take(limit)
+            .orderBy('ro.createdAt', 'DESC')
+            .getMany();
+
+        return {
+            officers: officers.map(officer => ({
+                id: officer.id,
+                nationalId: officer.nationalId,
+                email: officer.email,
+                firstName: officer.firstName,
+                lastName: officer.lastName,
+                phoneNumber: officer.phoneNumber,
+                preferredCounty1: officer.preferredCounty1,
+                preferredCounty2: officer.preferredCounty2,
+                assignedCountyId: officer.assignedCountyId,
+                assignedCountyName: officer.assignedCountyName,
+                level: officer.level,
+                status: officer.status,
+                createdAt: officer.createdAt,
+                updatedAt: officer.updatedAt,
+                county: officer.assignedCountyId ? {
+                    id: officer.assignedCountyId,
+                    name: officer.assignedCountyName,
+                } : null,
+            })),
+            pagination: { page, limit, total },
+        };
+    }
 }

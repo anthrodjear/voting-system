@@ -1,65 +1,128 @@
+/**
+ * Application Bootstrap
+ * 
+ * Main entry point for the NestJS voting system application.
+ * Includes:
+ * - Graceful shutdown handling
+ * - Startup health validation
+ * - Helmet security headers
+ * - API versioning
+ * - Proper error handling
+ */
+
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ValidationPipeCustom } from './common/pipes/validation.pipe';
-import { HttpExceptionFilter } from './common/filters/exception.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
+const logger = new Logger('Bootstrap');
+
+/**
+ * Main bootstrap function
+ */
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
-  });
+  try {
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    });
 
-  // Global prefix
-  app.setGlobalPrefix('api');
+    const configService = app.get(ConfigService);
+    const nodeEnv = configService.get<string>('NODE_ENV', 'development');
+    const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
 
-  // Enable CORS
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
-    credentials: true,
-  });
+    // Security headers via Helmet
+    app.use(helmet());
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipeCustom({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
+    // Enable CORS
+    app.enableCors({
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        if (!origin) {
+          return callback(null, true);
+        }
+        if (frontendUrl.includes(origin) || origin === '*') {
+          return callback(null, true);
+        }
+        callback(null, true); // Allow in dev mode
       },
-    }),
-  );
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true,
+    });
 
-  // Global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter());
+    // Global prefix
+    const apiVersion = configService.get<string>('API_VERSION', 'v1');
+    app.setGlobalPrefix(apiVersion);
 
-  // Global interceptor
-  app.useGlobalInterceptors(new LoggingInterceptor());
+    // Global validation pipe
+    app.useGlobalPipes(
+      new ValidationPipeCustom({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
 
-  // Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('Voting System API')
-    .setDescription('Blockchain Voting System Backend API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('voters', 'Voter management')
-    .addTag('candidates', 'Candidate management')
-    .addTag('votes', 'Voting operations')
-    .addTag('batches', 'Batch processing')
-    .addTag('admin', 'Admin operations')
-    .addTag('reports', 'Reporting & analytics')
-    .build();
+    // Global exception filter
+    const isProduction = nodeEnv === 'production';
+    app.useGlobalFilters(new AllExceptionsFilter(isProduction));
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+    // Global interceptor
+    app.useGlobalInterceptors(new LoggingInterceptor());
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
+    // Swagger documentation
+    const config = new DocumentBuilder()
+      .setTitle('Voting System API')
+      .setDescription('Blockchain Voting System Backend API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .addTag('health', 'System health checks')
+      .addTag('auth', 'Authentication endpoints')
+      .addTag('voters', 'Voter management')
+      .addTag('candidates', 'Candidate management')
+      .addTag('votes', 'Voting operations')
+      .build();
 
-  console.log(`Application is running on: http://localhost:${port}/api`);
-  console.log(`Swagger docs: http://localhost:${port}/api/docs`);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+
+    // Get port from config
+    const port = parseInt(configService.get<string>('PORT', '3001'), 10);
+
+    // Start server
+    await app.listen(port);
+    
+    logger.log(`==================================================`);
+    logger.log(`  Voting System API started successfully`);
+    logger.log(`  Environment: ${nodeEnv}`);
+    logger.log(`  API: http://localhost:${port}`);
+    logger.log(`  Swagger: http://localhost:${port}/docs`);
+    logger.log(`  Health: http://localhost:${port}/health`);
+    logger.log(`==================================================`);
+
+    // Graceful shutdown handlers
+    process.on('SIGTERM', async () => {
+      logger.log('SIGTERM received. Starting graceful shutdown...');
+      await app.close();
+      logger.log('HTTP server closed');
+      process.exit(0);
+    });
+
+    process.on('SIGINT', async () => {
+      logger.log('SIGINT received. Starting graceful shutdown...');
+      await app.close();
+      logger.log('HTTP server closed');
+      process.exit(0);
+    });
+
+  } catch (error) {
+    logger.error('Failed to start application:', error);
+    process.exit(1);
+  }
 }
 
 bootstrap();

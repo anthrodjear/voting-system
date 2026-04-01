@@ -85,4 +85,22 @@ export class AuthController {
       data: { message: 'Logged out successfully' },
     };
   }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'Current user' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getMe(
+    @CurrentUser('id') userId: string,
+    @CurrentUser('userType') userType: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const user = await this.authService.getUserById(userId, userType);
+
+    return {
+      success: true,
+      data: user,
+    };
+  }
 }

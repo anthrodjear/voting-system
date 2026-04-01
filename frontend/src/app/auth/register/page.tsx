@@ -9,7 +9,10 @@ import {
   ArrowRightIcon,
   ArrowLeftIcon
 } from '@heroicons/react/24/outline';
-import { Button, Input, Card, StepIndicator } from '@/components/ui';
+import { Button, Input, Card, StepIndicator, Alert } from '@/components/ui';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { register } from '@/services/auth';
 
 const steps = [
   { label: 'Account', status: 'completed' as const },
@@ -19,9 +22,44 @@ const steps = [
 ];
 
 export default function RegisterPage() {
-  const handleSubmit = (e: React.FormEvent) => {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Multi-step form logic would go here
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      // In a real implementation, we would collect form data from a multi-step form
+      // For now, we'll simulate with placeholder data
+      const formData = {
+        nationalId: '12345678',
+        firstName: 'John',
+        lastName: 'Doe',
+        dateOfBirth: '1990-01-01',
+        county: 'Nairobi',
+        constituency: 'Kasarani',
+        ward: 'Mwiki',
+        phoneNumber: '+254700000000',
+        email: 'john.doe@example.com'
+      };
+      
+      await register(formData);
+      setSuccess('Registration successful! Please check your email to verify your account.');
+      
+      // Redirect to login after a brief delay
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -38,12 +76,35 @@ export default function RegisterPage() {
         <p className="text-neutral-500">Step 1: Set up your login credentials</p>
       </div>
 
+      {success && (
+        <div className="mb-6 p-4 bg-success-light border-l-4 border-success rounded-r-lg">
+          <div className="flex items-center gap-2 text-success-dark">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-medium">{success}</span>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 p-4 bg-error-light border-l-4 border-error rounded-r-lg">
+          <div className="flex items-center gap-2 text-error-dark">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-medium">{error}</span>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-5">
         <Input
           label="Full Name"
           type="text"
           placeholder="John Doe"
           leftIcon={<UserIcon className="w-5 h-5" />}
+          autoComplete="name"
           required
         />
 
@@ -53,6 +114,7 @@ export default function RegisterPage() {
           placeholder="you@example.com"
           leftIcon={<EnvelopeIcon className="w-5 h-5" />}
           helperText="We'll send verification links to this email"
+          autoComplete="email"
           required
         />
 
@@ -62,6 +124,7 @@ export default function RegisterPage() {
           placeholder="+254 700 000 000"
           leftIcon={<PhoneIcon className="w-5 h-5" />}
           helperText="For SMS notifications and account recovery"
+          autoComplete="tel"
           required
         />
 
@@ -72,6 +135,7 @@ export default function RegisterPage() {
           leftIcon={<LockClosedIcon className="w-5 h-5" />}
           helperText="Min 12 characters with uppercase, lowercase, numbers, and symbols"
           required
+          autoComplete="new-password"
         />
 
         <Input
@@ -80,6 +144,7 @@ export default function RegisterPage() {
           placeholder="Confirm your password"
           leftIcon={<LockClosedIcon className="w-5 h-5" />}
           required
+          autoComplete="new-password"
         />
 
         <div className="flex items-start gap-2">
@@ -105,9 +170,10 @@ export default function RegisterPage() {
           type="submit"
           fullWidth
           size="lg"
+          loading={isLoading}
           className="mt-6"
         >
-          Continue to ID Verification
+          {isLoading ? 'Registering...' : 'Continue to ID Verification'}
           <ArrowRightIcon className="w-5 h-5 ml-2" />
         </Button>
       </form>
@@ -116,7 +182,7 @@ export default function RegisterPage() {
         <p className="text-neutral-600">
           Already have an account?{' '}
           <Link 
-            href="/login" 
+            href="/auth/login" 
             className="text-primary-600 hover:text-primary-700 font-semibold"
           >
             Sign In

@@ -6,10 +6,23 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { ReturningOfficer } from './returning-officer.entity';
 
+/**
+ * RoApplication Entity - Returning Officer applications for election cycles
+ * 
+ * Database Optimization Notes:
+ * - Index on ro_id for特定RO的申请查询
+ * - Index on election_cycle for特定选举周期的申请查询
+ * - Index on status for申请状态过滤
+ */
 @Entity('ro_applications')
+@Index('idx_roapp_ro', ['roId'])
+@Index('idx_roapp_cycle', ['electionCycle'])
+@Index('idx_roapp_status', ['status'])
+@Index('idx_roapp_assigned_county', ['assignedCounty'])
 export class RoApplication {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -71,7 +84,14 @@ export class RoApplication {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => ReturningOfficer)
+  /**
+   * Relationship: RoApplication belongs to one ReturningOfficer
+   * Foreign Key: ro_id references returning_officers(id)
+   */
+  @ManyToOne(() => ReturningOfficer, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'ro_id' })
   returningOfficer: ReturningOfficer;
 }

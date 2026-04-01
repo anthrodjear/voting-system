@@ -28,7 +28,8 @@ export {
 } from './auth';
 
 export type { 
-  LoginCredentials, 
+  LoginCredentials,
+  BackendLoginResponse,
   RegisterData, 
   RefreshTokenResponse 
 } from './auth';

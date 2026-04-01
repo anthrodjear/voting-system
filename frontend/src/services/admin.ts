@@ -101,14 +101,15 @@ export async function getActivityFeed(
 }
 
 /**
- * Get all returning officers with pagination
+ * Get returning officer applications
+ * NOTE: Maps /admin/ro/applications response to ReturningOfficer[]
  */
 export async function getReturningOfficers(
   params: AdminFilterParams = {}
 ): Promise<PaginatedResponse<ReturningOfficer>> {
   try {
     const response = await api.get<ApiResponse<PaginatedResponse<ReturningOfficer>>>(
-      '/admin/returning-officers',
+      '/admin/ro/applications',
       { params: params as Record<string, string | number | boolean | undefined> }
     );
     
@@ -156,9 +157,12 @@ export async function getReturningOfficerById(id: string): Promise<ReturningOffi
 /**
  * Approve returning officer application
  */
-export async function approveRO(id: string): Promise<void> {
+export async function approveRO(id: string, assignedCounty?: string): Promise<void> {
   try {
-    await api.post(`/admin/returning-officers/${id}/approve`);
+    await api.put(`/admin/ro/applications/${id}`, {
+      action: 'approve',
+      assignedCounty: assignedCounty
+    });
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to approve returning officer');
@@ -172,7 +176,10 @@ export async function approveRO(id: string): Promise<void> {
  */
 export async function rejectRO(id: string, reason: string): Promise<void> {
   try {
-    await api.post(`/admin/returning-officers/${id}/reject`, { reason });
+    await api.put(`/admin/ro/applications/${id}`, {
+      action: 'reject',
+      notes: reason
+    });
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to reject returning officer');
@@ -263,10 +270,11 @@ export async function assignROToCounty(roId: string, countyCode: string): Promis
 
 /**
  * Get system health status
+ * NOTE: Uses /health endpoint since /admin/system/health doesn't exist
  */
 export async function getSystemHealth(): Promise<SystemHealth> {
   try {
-    const response = await api.get<ApiResponse<SystemHealth>>('/admin/system/health');
+    const response = await api.get<ApiResponse<SystemHealth>>('/health');
     
     return response.data || {
       status: 'critical',
@@ -286,6 +294,7 @@ export async function getSystemHealth(): Promise<SystemHealth> {
 
 /**
  * Get audit logs
+ * NOTE: Uses /reports/audit endpoint instead of /admin/audit-logs
  */
 export async function getAuditLogs(
   params?: {
@@ -299,7 +308,7 @@ export async function getAuditLogs(
 ): Promise<PaginatedResponse<AuditLog>> {
   try {
     const response = await api.get<ApiResponse<PaginatedResponse<AuditLog>>>(
-      '/admin/audit-logs',
+      '/reports/audit',
       { params: params as Record<string, string | number | boolean | undefined> }
     );
     

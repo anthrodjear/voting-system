@@ -4,9 +4,24 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
+/**
+ * Election Entity - Election information and configuration
+ * 
+ * Database Optimization Notes:
+ * - Index on election_type for快速筛选general/by-election类型
+ * - Index on status for快速pending/active状态查询
+ * - Index on election_date for日期范围查询
+ * - 复合索引 on (status, election_date) for查找特定日期范围的active选举
+ * - Materialized view建议for快速选举结果查询
+ */
 @Entity('elections')
+@Index('idx_elections_type', ['electionType'])
+@Index('idx_elections_status', ['status'])
+@Index('idx_elections_date', ['electionDate'])
+@Index('idx_elections_status_date', ['status', 'electionDate'])
 export class Election {
   @PrimaryGeneratedColumn('uuid')
   id: string;

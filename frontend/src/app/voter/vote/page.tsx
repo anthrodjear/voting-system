@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   CheckCircleIcon,
@@ -13,6 +13,9 @@ import {
 } from '@heroicons/react/24/outline';
 import { Button, Card, Badge, Modal, Progress, Alert } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
+import { useVotingStore } from '@/stores/voting.store';
+import { getCurrentElection, joinBatch, getBatchStatus, submitVote, getLiveResults } from '@/services';
 
 // Mock election data
 const election = {

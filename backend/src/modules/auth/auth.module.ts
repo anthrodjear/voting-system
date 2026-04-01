@@ -22,7 +22,7 @@ import { LoginHistory } from '../../entities/login-history.entity';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET', 'default-secret'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m'),
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m') as any,
         },
       }),
       inject: [ConfigService],

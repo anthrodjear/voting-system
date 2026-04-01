@@ -12,7 +12,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # =============================================================================
 # Stage 2: Development - Hot reload mode
@@ -29,7 +29,7 @@ ARG APP_NAME
 # Set environment variables for development
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
 ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
-ENV APP_NAME=${APP_NAME:-IEBC Voting System}
+ENV APP_NAME="IEBC Voting System"
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Expose the application port
@@ -59,7 +59,7 @@ ARG APP_NAME
 # Set environment variables for build
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-ENV APP_NAME=${APP_NAME:-IEBC Voting System}
+ENV APP_NAME="IEBC Voting System"
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the Next.js application

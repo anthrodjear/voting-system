@@ -176,12 +176,12 @@ export function VoterLayout({
                 </>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Link href="/login">
+                  <Link href="/auth/login">
                     <Button variant="ghost" size="sm">
                       Sign In
                     </Button>
                   </Link>
-                  <Link href="/register">
+                  <Link href="/auth/register">
                     <Button variant="primary" size="sm">
                       Register
                     </Button>
@@ -232,12 +232,12 @@ export function VoterLayout({
               
               {!user && (
                 <div className="pt-2 border-t border-neutral-200 space-y-2">
-                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="ghost" fullWidth>
                       Sign In
                     </Button>
                   </Link>
-                  <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/auth/register" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="primary" fullWidth>
                       Register
                     </Button>

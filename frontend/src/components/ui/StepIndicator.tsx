@@ -88,40 +88,40 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
       role="navigation"
       aria-label="Progress steps"
     >
-      {steps.map((step, index) => {
-        const status = getStepStatus(index);
-        const styles = getStepStyles(status);
-        const isClickable = !!onStepClick && status !== 'pending';
-        const isLastStep = index === steps.length - 1;
+       {steps.map((step, index) => {
+         const status = getStepStatus(index);
+         const styles = getStepStyles(status);
+         const isClickable = !!onStepClick && status !== 'pending';
+         const isLastStep = index === steps.length - 1;
 
-        const StepCircle = () => (
-          <div
-            className={`
-              flex items-center justify-center w-10 h-10 rounded-full
-              border-2 font-semibold text-sm
-              transition-all duration-300
-              ${styles.circle}
-              ${isClickable ? 'cursor-pointer hover:scale-110' : ''}
-            `}
-            aria-current={status === 'current' ? 'step' : undefined}
-          >
-            {status === 'completed' ? (
-              <CheckIcon />
-            ) : showNumbers ? (
-              index + 1
-            ) : null}
-          </div>
-        );
+         const StepCircle = () => (
+           <div
+             className={`
+               flex items-center justify-center w-10 h-10 rounded-full
+               border-2 font-semibold text-sm
+               transition-all duration-300
+               ${styles.circle}
+               ${isClickable ? 'cursor-pointer hover:scale-110' : ''}
+             `}
+             aria-current={status === 'current' ? 'step' : undefined}
+           >
+             {status === 'completed' ? (
+               <CheckIcon />
+             ) : showNumbers ? (
+               index + 1
+             ) : null}
+           </div>
+         );
 
-        return (
-          <div
-            key={step.id}
-            className={`
-              ${isVertical ? 'flex items-start' : 'flex items-center flex-1'}
-              ${isClickable ? 'cursor-pointer' : ''}
-            `}
-            onClick={() => isClickable && onStepClick?.(index)}
-          >
+         return (
+           <div
+             key={step.id !== undefined ? step.id : index}
+             className={`
+               ${isVertical ? 'flex items-start' : 'flex items-center flex-1'}
+               ${isClickable ? 'cursor-pointer' : ''}
+             `}
+             onClick={() => isClickable && onStepClick?.(index)}
+           >
             {/* Step Circle and Label */}
             <div className="flex flex-col items-center">
               <div

@@ -17,8 +17,8 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/register'];
+  // Routes that don't require authentication
+  const PUBLIC_ROUTES = ['/', '/auth/login', '/auth/register', '/auth/forgot-password'];
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
@@ -35,14 +35,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
-    // If not authenticated and trying to access protected route
-    if (!isAuthenticated && !isPublicRoute) {
-      router.push('/login');
-      return;
-    }
+     // If not authenticated and trying to access protected route
+     if (!isAuthenticated && !isPublicRoute) {
+       router.push('/auth/login');
+       return;
+     }
 
     // If authenticated and trying to access auth routes
-    if (isAuthenticated && (pathname === '/login' || pathname === '/register')) {
+    if (isAuthenticated && (pathname === '/auth/login' || pathname === '/auth/register' || pathname === '/auth/forgot-password')) {
       if (user?.role) {
         const redirectPath = ROLE_ROUTES[user.role as keyof typeof ROLE_ROUTES];
         router.push(`${redirectPath}/dashboard`);

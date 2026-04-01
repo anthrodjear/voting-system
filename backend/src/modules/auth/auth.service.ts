@@ -225,6 +225,25 @@ export class AuthService {
     };
   }
 
+  async getUserById(userId: string, userType: string): Promise<any> {
+    let user: any = null;
+
+    if (userType === 'voter') {
+      user = await this.voterRepository.findOne({ where: { id: userId } });
+    } else if (userType === 'ro') {
+      user = await this.roRepository.findOne({ where: { id: userId } });
+    } else {
+      user = await this.adminRepository.findOne({ where: { id: userId } });
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const { passwordHash, ...result } = user;
+    return result;
+  }
+
   private async logLoginAttempt(
     userId: string,
     userType: string,

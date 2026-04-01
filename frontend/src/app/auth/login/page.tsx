@@ -15,10 +15,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { Button, Input, Card } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
+import { login } from '@/services/auth';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  identifier: z.string().min(1, 'Identifier is required'),
   password: z.string().min(1, 'Password is required'),
+  userType: z.enum(['voter', 'admin', 'ro']).default('voter'),
   rememberMe: z.boolean().optional(),
 });
 
@@ -26,7 +28,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuthStore();
+  const { login: storeLogin } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +36,14 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
+      identifier: '',
       password: '',
+      userType: 'voter',
       rememberMe: false,
     },
   });
@@ -49,32 +53,34 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Simulate API call - replace with actual authentication
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await login({
+        identifier: data.identifier,
+        password: data.password,
+        userType: data.userType
+      });
 
-      // Mock successful login
-      const mockUser = {
-        id: '1',
-        email: data.email,
-        role: 'voter' as const,
-        firstName: 'John',
-        lastName: 'Doe',
-        phone: '+254700000000',
-        county: 'Nairobi',
-        constituency: 'Kasarani',
-        ward: 'Mwiki',
-        avatar: undefined,
-        status: 'active' as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      login(mockUser, 'mock-token-12345');
+      // Store user data in auth store
+      storeLogin(response.user, response.token, response.expiresIn);
 
       // Redirect based on role
-      router.push('/voter/dashboard');
-    } catch (err) {
-      setError('Invalid email or password. Please try again.');
+      switch (response.user.role) {
+        case 'voter':
+          router.push('/voter/dashboard');
+          break;
+        case 'admin':
+          router.push('/admin/dashboard');
+          break;
+        case 'returning_officer':
+          router.push('/ro/dashboard');
+          break;
+        case 'super_admin':
+          router.push('/admin/dashboard');
+          break;
+        default:
+          router.push('/voter/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -104,19 +110,21 @@ export default function LoginPage() {
           type="email"
           placeholder="you@example.com"
           leftIcon={<EnvelopeIcon className="w-5 h-5" />}
-          error={errors.email?.message}
-          {...register('email')}
+          error={errors.identifier?.message}
+          autoComplete="email"
+          {...register('identifier')}
         />
 
-        <div className="relative">
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Enter your password"
-            leftIcon={<LockClosedIcon className="w-5 h-5" />}
-            error={errors.password?.message}
-            {...register('password')}
-          />
+         <div className="relative">
+           <Input
+             label="Password"
+             type={showPassword ? 'text' : 'password'}
+             placeholder="Enter your password"
+             leftIcon={<LockClosedIcon className="w-5 h-5" />}
+             error={errors.password?.message}
+             {...register('password')}
+              autoComplete="current-password"
+           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
@@ -140,7 +148,7 @@ export default function LoginPage() {
             <span className="text-sm text-neutral-600">Remember me</span>
           </label>
           <Link 
-            href="/forgot-password" 
+            href="/auth/forgot-password" 
             className="text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
             Forgot password?
@@ -163,7 +171,7 @@ export default function LoginPage() {
         <p className="text-neutral-600">
           Don't have an account?{' '}
           <Link 
-            href="/register" 
+            href="/auth/register" 
             className="text-primary-600 hover:text-primary-700 font-semibold"
           >
             Register to Vote
@@ -173,11 +181,44 @@ export default function LoginPage() {
 
       {/* Demo Accounts */}
       <div className="mt-6 p-4 bg-neutral-50 rounded-lg">
-        <p className="text-xs font-medium text-neutral-500 mb-2">Demo Accounts:</p>
-        <div className="space-y-1 text-xs text-neutral-400">
-          <p>Voter: voter@iebc.go.ke</p>
-          <p>Admin: admin@iebc.go.ke</p>
-          <p>RO: ro@iebc.go.ke</p>
+        <p className="text-xs font-medium text-neutral-500 mb-2">Demo Accounts (click to auto-fill):</p>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => {
+              setValue('identifier', 'voter@iebc.go.ke');
+              setValue('password', 'Voter123456!');
+              setValue('userType', 'voter');
+            }}
+            className="w-full text-left text-xs p-2 rounded bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-colors"
+          >
+            <span className="font-medium text-neutral-700">Voter:</span>{' '}
+            <span className="text-neutral-500">voter@iebc.go.ke / Voter123456!</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setValue('identifier', 'admin@iebc.go.ke');
+              setValue('password', 'Admin123456!');
+              setValue('userType', 'admin');
+            }}
+            className="w-full text-left text-xs p-2 rounded bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-colors"
+          >
+            <span className="font-medium text-neutral-700">Admin:</span>{' '}
+            <span className="text-neutral-500">admin@iebc.go.ke / Admin123456!</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setValue('identifier', 'ro@iebc.go.ke');
+              setValue('password', 'Ro123456789!');
+              setValue('userType', 'ro');
+            }}
+            className="w-full text-left text-xs p-2 rounded bg-white hover:bg-primary-50 border border-neutral-200 hover:border-primary-300 transition-colors"
+          >
+            <span className="font-medium text-neutral-700">RO:</span>{' '}
+            <span className="text-neutral-500">ro@iebc.go.ke / Ro123456789!</span>
+          </button>
         </div>
       </div>
     </Card>

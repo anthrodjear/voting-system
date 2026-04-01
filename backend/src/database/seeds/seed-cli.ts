@@ -24,6 +24,7 @@ import { County } from '../../entities/county.entity';
 import { Constituency } from '../../entities/constituency.entity';
 import { Ward } from '../../entities/ward.entity';
 import { Voter } from '../../entities/voter.entity';
+import { VoterBiometric } from '../../entities/voter-biometric.entity';
 import { Candidate } from '../../entities/candidate.entity';
 import { Election } from '../../entities/election.entity';
 
@@ -47,6 +48,7 @@ async function createDataSource(): Promise<DataSource> {
       Constituency,
       Ward,
       Voter,
+      VoterBiometric,
       Candidate,
       Election,
     ],
