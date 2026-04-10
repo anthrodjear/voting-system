@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AuthController } from './auth.controller';
+import { AuthPasswordController } from './auth-password.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { Voter } from '../../entities/voter.entity';
@@ -12,15 +13,16 @@ import { ReturningOfficer } from '../../entities/returning-officer.entity';
 import { SuperAdmin } from '../../entities/super-admin.entity';
 import { Session } from '../../entities/session.entity';
 import { LoginHistory } from '../../entities/login-history.entity';
+import { AuditLog } from '../../entities/audit-log.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Voter, ReturningOfficer, SuperAdmin, Session, LoginHistory]),
+    TypeOrmModule.forFeature([Voter, ReturningOfficer, SuperAdmin, Session, LoginHistory, AuditLog]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'default-secret'),
+        secret: configService.get<string>('JWT_SECRET') || (() => { throw new Error('JWT_SECRET environment variable is required. Set it in your .env file.'); })(),
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m') as any,
         },
@@ -28,7 +30,7 @@ import { LoginHistory } from '../../entities/login-history.entity';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthPasswordController],
   providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtStrategy, PassportModule],
 })

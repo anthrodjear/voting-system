@@ -46,14 +46,20 @@ export interface VoterProfile {
   gender: 'M' | 'F';
   dateOfBirth: string;
   email?: string;
-  phone?: string;
-  county: string;
-  constituency: string;
-  ward: string;
+  phoneNumber: string;
+  countyId?: string;
+  countyName?: string;
+  constituencyId?: string;
+  constituencyName?: string;
+  wardId?: string;
+  wardName?: string;
+  status?: string;
   registrationStatus: RegistrationStatus;
-  biometricsEnrolled: {
-    face: boolean;
-    fingerprints: boolean;
+  registrationMessage?: string;
+  nationalIdVerified: boolean;
+  biometric?: {
+    faceEnrolled: boolean;
+    fingerprintEnrolled: boolean;
   };
   registeredAt?: string;
   verifiedAt?: string;

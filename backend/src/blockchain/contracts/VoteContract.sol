@@ -127,6 +127,20 @@ contract VoteContract is AccessControl, ReentrancyGuard, Pausable {
         string reason
     );
     
+    /// @notice Emitted when election results are published
+    event ResultsPublished(
+        bytes32 encryptedResults,
+        bytes proof,
+        uint256 timestamp
+    );
+    
+    /// @notice Emitted when election results are published
+    event ResultsPublished(
+        bytes32 encryptedResults,
+        bytes proof,
+        uint256 timestamp
+    );
+    
     // ============================================
     // Errors
     // ============================================
@@ -409,9 +423,13 @@ contract VoteContract is AccessControl, ReentrancyGuard, Pausable {
         );
         
         if (success && data.length > 0) {
-            verificationKey = data;
+            // Decode the returned bytes
+            verificationKey = abi.decode(data, (bytes));
             isSet = verificationKey.length > 0;
+        } else {
+            isSet = false;
         }
+    }
     }
     
     /**
@@ -594,6 +612,148 @@ contract VoteContract is AccessControl, ReentrancyGuard, Pausable {
         return candidateIds[index];
     }
     
+    /**
+     * @dev Get election data
+     * @return state Current election state
+     * @return startTime Election start timestamp
+     * @return endTime Election end timestamp
+     * @return totalVotes Total votes cast
+     */
+    function getElectionData() 
+        external 
+        view 
+        returns (
+            ElectionState state,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 totalVotes
+        ) 
+    {
+        return (state, electionStartTime, electionEndTime, totalVotes);
+    }
+
+    /**
+     * @dev Publish election results (TALLY_ROLE only)
+     * @param encryptedResults Encrypted election results
+     * @param proof ZK proof for results validity
+     */
+    function publishResults(
+        bytes32 encryptedResults,
+        bytes calldata proof
+    )
+        external
+        onlyRole(TALLY_ROLE)
+        nonReentrant
+        whenNotPaused
+    {
+        // Verify election state allows publishing
+        if (state != ElectionState.Tallying && state != ElectionState.Completed) {
+            revert InvalidElectionState();
+        }
+
+        // Store results on-chain (in production, this would be per-candidate)
+        // For now, emit an event with the results hash
+        emit ResultsPublished(encryptedResults, proof, block.timestamp);
+    }
+
+    /**
+     * @dev Verify election results for a candidate
+     * @param candidateId Candidate ID
+     * @param encryptedCount Encrypted vote count
+     * @param proof ZK proof
+     * @return Whether results are valid
+     */
+    function verifyResult(
+        bytes32 candidateId,
+        bytes32 encryptedCount,
+        bytes calldata proof
+    ) external view returns (bool) {
+        // Check candidate exists
+        if (!candidates[candidateId].isActive) {
+            return false;
+        }
+
+        // Verify proof length
+        if (proof.length < MIN_PROOF_LENGTH || proof.length > MAX_PROOF_LENGTH) {
+            return false;
+        }
+
+        // In production, this would perform actual ZK verification
+        // of the encrypted count against the stored count
+        return true;
+    }
+
+    /**
+     * @dev Get election data
+     * @return state Current election state
+     * @return startTime Election start timestamp
+     * @return endTime Election end timestamp
+     * @return totalVotes Total votes cast
+     */
+    function getElectionData() 
+        external 
+        view 
+        returns (
+            ElectionState state,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 totalVotes
+        ) 
+    {
+        return (state, electionStartTime, electionEndTime, totalVotes);
+    }
+
+    /**
+     * @dev Publish election results (TALLY_ROLE only)
+     * @param encryptedResults Encrypted election results
+     * @param proof ZK proof for results validity
+     */
+    function publishResults(
+        bytes32 encryptedResults,
+        bytes calldata proof
+    )
+        external
+        onlyRole(TALLY_ROLE)
+        nonReentrant
+        whenNotPaused
+    {
+        // Verify election state allows publishing
+        if (state != ElectionState.Tallying && state != ElectionState.Completed) {
+            revert InvalidElectionState();
+        }
+
+        // Store results on-chain (in production, this would be per-candidate)
+        // For now, emit an event with the results hash
+        emit ResultsPublished(encryptedResults, proof, block.timestamp);
+    }
+
+    /**
+     * @dev Verify election results for a candidate
+     * @param candidateId Candidate ID
+     * @param encryptedCount Encrypted vote count
+     * @param proof ZK proof
+     * @return Whether results are valid
+     */
+    function verifyResult(
+        bytes32 candidateId,
+        bytes32 encryptedCount,
+        bytes calldata proof
+    ) external view returns (bool) {
+        // Check candidate exists
+        if (!candidates[candidateId].isActive) {
+            return false;
+        }
+
+        // Verify proof length
+        if (proof.length < MIN_PROOF_LENGTH || proof.length > MAX_PROOF_LENGTH) {
+            return false;
+        }
+
+        // In production, this would perform actual ZK verification
+        // of the encrypted count against the stored count
+        return true;
+    }
+
     /**
      * @dev Check if candidate exists
      * @param _candidateId Candidate ID to check

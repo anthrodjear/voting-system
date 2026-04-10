@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Voter Registration', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/register');
+    await page.goto('/auth/register');
   });
 
   test('should display registration form', async ({ page }) => {

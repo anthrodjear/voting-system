@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
 
 import { Voter } from '../../entities/voter.entity';
 import { ReturningOfficer } from '../../entities/returning-officer.entity';
@@ -260,5 +261,155 @@ export class AuthService {
       ipAddress,
       userAgent,
     });
+  }
+
+  // ============================================================
+  // Password & Profile Management
+  // ============================================================
+
+  async changePassword(userId: string, userType: string, currentPassword: string, newPassword: string): Promise<void> {
+    let user: Voter | ReturningOfficer | SuperAdmin | null = null;
+
+    if (userType === 'voter') {
+      user = await this.voterRepository.findOne({ where: { id: userId } });
+    } else if (userType === 'ro') {
+      user = await this.roRepository.findOne({ where: { id: userId } });
+    } else {
+      user = await this.adminRepository.findOne({ where: { id: userId } });
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isCurrentValid = await argon2.verify(user.passwordHash, currentPassword);
+    if (!isCurrentValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const newHash = await argon2.hash(newPassword);
+
+    if (userType === 'voter') {
+      await this.voterRepository.update(userId, { passwordHash: newHash, passwordChangedAt: new Date() });
+    } else if (userType === 'ro') {
+      await this.roRepository.update(userId, { passwordHash: newHash });
+    } else {
+      await this.adminRepository.update(userId, { passwordHash: newHash });
+    }
+
+    this.logger.log(`Password changed for user ${userId}`);
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    // Find user across all user types
+    let user: Voter | ReturningOfficer | SuperAdmin | null = null;
+    let userType = '';
+
+    user = await this.voterRepository.findOne({ where: { email } });
+    if (user) userType = 'voter';
+
+    if (!user) {
+      user = await this.roRepository.findOne({ where: { email } });
+      if (user) userType = 'ro';
+    }
+
+    if (!user) {
+      user = await this.adminRepository.findOne({ where: { email } });
+      if (user) userType = 'admin';
+    }
+
+    if (!user) {
+      // Don't reveal whether user exists - return success anyway for security
+      this.logger.warn(`Forgot password requested for non-existent email: ${email}`);
+      return;
+    }
+
+    // Generate reset token
+    const resetToken = randomBytes(32).toString('hex');
+    const resetTokenHash = await argon2.hash(resetToken);
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+    // TODO: Store reset token in database and send email
+    // For now, log the token (in production, use a proper email service)
+    this.logger.log(`Password reset token for ${email}: ${resetToken} (TODO: integrate email service)`);
+
+    // Store token hash on user record
+    // TODO: Add resetTokenHash and resetTokenExpiry columns to user entities
+    // For now, this is a stub that would need entity updates
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // TODO: Implement proper token validation against stored reset tokens
+    // For now, this is a stub - in production, verify token hash and expiry
+    this.logger.warn(`resetPassword called - TODO: implement token validation`);
+    throw new UnauthorizedException('Password reset not yet implemented. Please contact support.');
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    // TODO: Implement proper email verification token validation
+    // For now, this is a stub
+    this.logger.warn(`verifyEmail called - TODO: implement token validation`);
+    throw new UnauthorizedException('Email verification not yet implemented. Please contact support.');
+  }
+
+  async resendVerification(email: string): Promise<void> {
+    // Find user
+    let user: Voter | ReturningOfficer | SuperAdmin | null = null;
+
+    user = await this.voterRepository.findOne({ where: { email } });
+    if (!user) {
+      user = await this.roRepository.findOne({ where: { email } });
+    }
+    if (!user) {
+      user = await this.adminRepository.findOne({ where: { email } });
+    }
+
+    if (!user) {
+      this.logger.warn(`Resend verification requested for non-existent email: ${email}`);
+      return;
+    }
+
+    // TODO: Generate and send new verification email
+    this.logger.log(`Resend verification for ${email} (TODO: integrate email service)`);
+  }
+
+  async updateProfile(userId: string, userType: string, dto: { firstName?: string; lastName?: string; phoneNumber?: string; email?: string }): Promise<any> {
+    let user: any = null;
+
+    if (userType === 'voter') {
+      user = await this.voterRepository.findOne({ where: { id: userId } });
+    } else if (userType === 'ro') {
+      user = await this.roRepository.findOne({ where: { id: userId } });
+    } else {
+      user = await this.adminRepository.findOne({ where: { id: userId } });
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const updateData: Partial<Voter> = {};
+    if (dto.firstName) updateData.firstName = dto.firstName;
+    if (dto.lastName) updateData.lastName = dto.lastName;
+    if (dto.phoneNumber) updateData.phoneNumber = dto.phoneNumber;
+    if (dto.email) updateData.email = dto.email;
+
+    if (userType === 'voter') {
+      await this.voterRepository.update(userId, updateData);
+      user = await this.voterRepository.findOne({ where: { id: userId } });
+    } else if (userType === 'ro') {
+      await this.roRepository.update(userId, updateData);
+      user = await this.roRepository.findOne({ where: { id: userId } });
+    } else {
+      await this.adminRepository.update(userId, updateData);
+      user = await this.adminRepository.findOne({ where: { id: userId } });
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found after update');
+    }
+
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
   }
 }

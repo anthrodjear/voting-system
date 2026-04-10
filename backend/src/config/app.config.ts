@@ -26,7 +26,7 @@ class DatabaseConfig {
 
   @IsString()
   @IsOptional()
-  password: string = 'postgres';
+  password: string = process.env.DB_PASSWORD || '';
 
   @IsString()
   @IsOptional()

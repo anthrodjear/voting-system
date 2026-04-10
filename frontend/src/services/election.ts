@@ -81,31 +81,14 @@ export async function getElections(
 
 /**
  * Get active/upcoming election
- * NOTE: Builds election context from candidates endpoint since /elections/current doesn't exist
+ * Fetches from GET /elections/upcoming and returns the first upcoming election
  */
 export async function getCurrentElection(): Promise<Election | null> {
   try {
-    // Use /candidates to get election context instead
-    const response = await api.get<ApiResponse<Candidate[]>>('/candidates', {
-      params: { page: 1, pageSize: 1 } as Record<string, string | number | boolean | undefined>
-    });
+    const response = await api.get<ApiResponse<Election[]>>('/elections/upcoming');
     
-    if (response.data?.data && response.data.data.length > 0) {
-      // Return a basic election object built from candidate data
-      // This assumes all candidates belong to the same election
-      const firstCandidate = response.data.data[0];
-      
-      // We need to get the actual election ID from the candidate
-      // For now, we'll return null and let the caller handle this appropriately
-      // In a real implementation, we'd fetch the election details
-      return {
-        id: firstCandidate.electionId || 'unknown',
-        name: 'Current Election',
-        type: 'general',
-        status: 'active',
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      } as Election;
+    if (response.data && response.data.length > 0) {
+      return response.data[0];
     }
     
     return null;

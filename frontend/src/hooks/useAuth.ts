@@ -7,8 +7,9 @@ import { login as authLogin, logout as authLogout, refreshToken, updateProfile a
 import type { User, UserRole } from '@/types';
 
 interface LoginCredentials {
-  email: string;
+  identifier: string;
   password: string;
+  userType?: 'voter' | 'ro' | 'admin';
 }
 
 const ROLE_PERMISSIONS: Record<UserRole, string[]> = {

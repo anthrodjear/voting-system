@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Put,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -15,6 +16,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagg
 
 import { VoterService } from './voter.service';
 import { RegisterVoterDto, UpdateVoterDto, BiometricEnrollDto } from '../../dto/voter.dto';
+import { UpdateProfileDto } from '../../dto/auth-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -173,6 +175,57 @@ export class VoterController {
     return {
       success: true,
       data: result,
+    };
+  }
+
+  // ============================================================
+  // NEW ENDPOINTS
+  // ============================================================
+
+  @Get('lookup-niif/:nationalId')
+  @ApiOperation({ summary: 'Lookup voter in NIIF (National Integrated Identity Framework)' })
+  @ApiResponse({ status: 200, description: 'NIIF lookup result' })
+  async lookupNiif(
+    @Param('nationalId') nationalId: string,
+  ): Promise<{ success: boolean; data: any }> {
+    // TODO: Integrate with actual NIIF API for real identity verification.
+    // This is a stub that returns structured mock data for development/testing.
+    // Production implementation should call the NIIF REST API with proper auth.
+    const result = {
+      found: true,
+      nationalId,
+      firstName: 'John',
+      lastName: 'Doe',
+      gender: 'M' as const,
+      dateOfBirth: '1990-01-15',
+      county: 'Nairobi',
+      constituency: 'Starehe',
+      ward: 'Ngara',
+    };
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current voter profile (requires JWT auth)' })
+  @ApiResponse({ status: 200, description: 'Profile updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(
+    @CurrentUser('id') voterId: string,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<{ success: boolean; data: any }> {
+    const result = await this.voterService.update(voterId, dto as UpdateVoterDto, voterId);
+    const voter = await this.voterService.findById(voterId);
+    const { passwordHash, passwordChangedAt, failedLoginAttempts, lockedAt, ...safeVoter } = voter;
+
+    return {
+      success: true,
+      data: safeVoter,
     };
   }
 }

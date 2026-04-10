@@ -69,6 +69,9 @@ export class Candidate {
   @Column({ name: 'party_abbreviation', length: 10, nullable: true })
   partyAbbreviation: string;
 
+  @Column({ name: 'party_color', length: 7, nullable: true })
+  partyColor: string;
+
   @Column({ name: 'is_independent', default: false })
   isIndependent: boolean;
 

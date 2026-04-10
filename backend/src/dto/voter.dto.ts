@@ -6,6 +6,7 @@ import {
   IsEmail,
   IsDateString,
   IsBoolean,
+  MinLength,
 } from 'class-validator';
 import {
   IsNationalId,
@@ -59,6 +60,12 @@ export class RegisterVoterDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @ApiPropertyOptional({ description: 'User-chosen password (min 8 chars)' })
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  password?: string;
 }
 
 export class UpdateVoterDto {

@@ -175,48 +175,50 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Demo Accounts */}
-      <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg">
-        <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">Demo Accounts (click to auto-fill):</p>
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => {
-              setValue('identifier', 'voter@iebc.go.ke');
-              setValue('password', 'Voter123456!');
-              setValue('userType', 'voter');
-            }}
-            className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
-          >
-            <span className="font-medium text-neutral-700 dark:text-neutral-300">Voter:</span>{' '}
-            <span className="text-neutral-500 dark:text-neutral-400">voter@iebc.go.ke / Voter123456!</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setValue('identifier', 'admin@iebc.go.ke');
-              setValue('password', 'Admin123456!');
-              setValue('userType', 'admin');
-            }}
-            className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
-          >
-            <span className="font-medium text-neutral-700 dark:text-neutral-300">Admin:</span>{' '}
-            <span className="text-neutral-500 dark:text-neutral-400">admin@iebc.go.ke / Admin123456!</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setValue('identifier', 'ro@iebc.go.ke');
-              setValue('password', 'Ro123456789!');
-              setValue('userType', 'ro');
-            }}
-            className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
-          >
-            <span className="font-medium text-neutral-700 dark:text-neutral-300">RO:</span>{' '}
-            <span className="text-neutral-500 dark:text-neutral-400">ro@iebc.go.ke / Ro123456789!</span>
-          </button>
+      {/* Demo Accounts - Only visible in development mode */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">Demo Accounts (click to auto-fill):</p>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                setValue('identifier', 'voter@iebc.go.ke');
+                setValue('password', 'Voter123456!');
+                setValue('userType', 'voter');
+              }}
+              className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
+            >
+              <span className="font-medium text-neutral-700 dark:text-neutral-300">Voter:</span>{' '}
+              <span className="text-neutral-500 dark:text-neutral-400">voter@iebc.go.ke / Voter123456!</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setValue('identifier', 'admin@iebc.go.ke');
+                setValue('password', 'Admin123456!');
+                setValue('userType', 'admin');
+              }}
+              className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
+            >
+              <span className="font-medium text-neutral-700 dark:text-neutral-300">Admin:</span>{' '}
+              <span className="text-neutral-500 dark:text-neutral-400">admin@iebc.go.ke / Admin123456!</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setValue('identifier', 'ro@iebc.go.ke');
+                setValue('password', 'Ro123456789!');
+                setValue('userType', 'ro');
+              }}
+              className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
+            >
+              <span className="font-medium text-neutral-700 dark:text-neutral-300">RO:</span>{' '}
+              <span className="text-neutral-500 dark:text-neutral-400">ro@iebc.go.ke / Ro123456789!</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </Card>
   );
 }

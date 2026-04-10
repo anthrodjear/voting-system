@@ -19,7 +19,7 @@ async function main() {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432', 10),
     username: process.env.DB_USERNAME || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
+    password: process.env.DB_PASSWORD || (() => { throw new Error('DB_PASSWORD environment variable is required for seed script.'); })(),
     database: process.env.DB_DATABASE || 'voting_system',
     entities: [County, Constituency, Ward, Voter, VoterBiometric, ReturningOfficer, SuperAdmin],
     synchronize: false,
@@ -85,6 +85,7 @@ async function main() {
   if (!a) {
     a = adminRepo.create({
       email: 'admin@iebc.go.ke', firstName: 'Admin', lastName: 'User',
+      phoneNumber: '+254700000002',
       passwordHash: adminPassword, level: 'super_admin', isActive: true,
     });
     console.log('Created demo admin: admin@iebc.go.ke / Admin123456!');
@@ -99,7 +100,11 @@ async function main() {
   let r = await roRepo.findOne({ where: { email: 'ro@iebc.go.ke' } });
   if (!r) {
     r = roRepo.create({
+      nationalId: '87654321',
       email: 'ro@iebc.go.ke', firstName: 'Returning', lastName: 'Officer',
+      phoneNumber: '+254700000003',
+      preferredCounty1: county.countyName,
+      preferredCounty2: county.countyName,
       passwordHash: roPassword, assignedCountyId: county.id,
       assignedCountyName: county.countyName, status: 'active',
     });

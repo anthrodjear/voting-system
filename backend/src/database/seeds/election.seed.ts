@@ -238,7 +238,11 @@ export class ElectionSeed {
     const electionMap = new Map<string, string>();
     elections.forEach((election) => {
       // Map by date string (YYYY-MM-DD format)
-      const dateStr = election.electionDate.toISOString().split('T')[0];
+      // Handle case where electionDate might be a string from database
+      const date = election.electionDate instanceof Date 
+        ? election.electionDate 
+        : new Date(election.electionDate);
+      const dateStr = date.toISOString().split('T')[0];
       electionMap.set(dateStr, election.id);
       // Also map by election name for convenience
       electionMap.set(election.electionName, election.id);

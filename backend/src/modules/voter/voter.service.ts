@@ -79,8 +79,8 @@ export class VoterService {
       }
     }
 
-    // Generate temporary password (should be changed by user)
-    const tempPassword = uuidv4().slice(0, 12);
+    // Use user-provided password or generate temporary one
+    const tempPassword = dto.password || uuidv4().slice(0, 12);
     const passwordHash = await argon2.hash(tempPassword);
 
     // Create voter
@@ -98,6 +98,7 @@ export class VoterService {
       wardId,
       wardName,
       status: 'pending_biometrics',
+      registrationStatus: 'verified', // Auto-verify for demo purposes
       passwordHash,
       registeredAt: new Date(),
     });
@@ -208,6 +209,7 @@ export class VoterService {
     if (faceEnrolled && fingerprintEnrolled) {
       await this.voterRepository.update(id, {
         status: 'verified',
+        registrationStatus: 'verified',
         nationalIdVerified: true,
         verifiedAt: new Date(),
       });

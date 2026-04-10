@@ -224,13 +224,13 @@ The voting system utilizes Hyperledger Besu, an enterprise-grade private blockch
 
 The blockchain network operates as a permissioned network with known validator nodes operated by IEBC and designated election observers. This permissioned architecture prevents unauthorized network participation while enabling the Byzantine fault tolerance required for electoral integrity. The network configuration requires a minimum of four validators with a Byzantine fault tolerance threshold of one fault (in a four-validator configuration).
 
-The private network uses the QBFT (Quorum Byzantine Fault Tolerance) consensus algorithm, which provides finality (no fork possibility) and handles up to N/2-1 Byzantine validators. QBFT is selected over other consensus algorithms for its performance characteristics and finality guarantee, ensuring that recorded votes cannot be reversed or modified after confirmation.
+The private network uses the IBFT 2.0 (Istanbul Byzantine Fault Tolerance) consensus algorithm, which provides finality (no fork possibility) and handles up to N/2-1 Byzantine validators. IBFT 2.0 is selected over other consensus algorithms for its performance characteristics and finality guarantee, ensuring that recorded votes cannot be reversed or modified after confirmation.
 
 Node security is enforced through multiple layers. All nodes require TLS communication, and client connections require authentication using X.509 certificates issued by the network certificate authority. The node configuration disables unnecessary APIs and services, minimizing the attack surface. Regular security patches are applied to node infrastructure following the change management process.
 
 ### 6.2 Consensus Mechanism Security
 
-The QBFT consensus mechanism provides robust security guarantees for the voting application. Understanding these guarantees is essential for assessing the overall security of the vote recording process.
+The IBFT 2.0 consensus mechanism provides robust security guarantees for the voting application. Understanding these guarantees is essential for assessing the overall security of the vote recording process.
 
 The consensus protocol ensures liveness, meaning that as long as a quorum of validators (more than two-thirds) is operational and honest, new votes will be processed and recorded. This ensures that the voting system remains operational throughout the voting period even if some validators experience issues.
 
@@ -242,9 +242,76 @@ The validator set is managed through a governance process that requires multi-pa
 
 Smart contracts implement the core voting logic and require rigorous security measures to prevent vulnerabilities that could compromise election integrity. All smart contracts undergo formal verification and security auditing before deployment.
 
-The vote recording smart contract implements access controls ensuring that only the designated voting contract can record votes. The contract validates vote metadata including timestamps and voter eligibility before accepting votes into the blockchain. The contract prevents double-voting by maintaining a mapping of voter identifiers to their vote hashes.
+#### VoteContract Security Features
 
-Reentrancy protection is implemented in all smart contracts to prevent common attack vectors. The contracts follow the checks-effects-interactions pattern, ensuring that all state changes occur before any external calls. The contract code is written in Solidity with version 0.8.x or higher, which includes built-in overflow protection.
+The `VoteContract` implements comprehensive security controls:
+
+**Access Control (RBAC):** The contract uses OpenZeppelin's AccessControl with four distinct roles:
+- `ADMIN_ROLE`: Full administrative control including election state management and candidate registration
+- `KEY_SETTER_ROLE`: Permission to update the key manager contract address
+- `VOTER_REGISTRAR_ROLE`: Authority to register eligible voters
+- `TALLY_ROLE`: Exclusive permission to publish election results
+
+**Reentrancy Protection:** All state-changing functions (`castVote`, `publishResults`) use the `nonReentrant` modifier following the checks-effects-interactions pattern to prevent reentrancy attacks.
+
+**Pausable Emergency Controls:** The contract inherits from OpenZeppelin's Pausable, allowing administrators to halt voting operations during security incidents. The `pause()` and `unpause()` functions are restricted to `ADMIN_ROLE`.
+
+**Input Validation:** The contract implements strict input validation:
+- Zero-value checks for `voterHash`, `voteHash`, and `blindingFactor` parameters
+- Proof length validation with `MIN_PROOF_LENGTH` (64 bytes) and `MAX_PROOF_LENGTH` (1024 bytes) constants
+- Custom Solidity errors (`ZeroVoterHash`, `ProofTooShort`, `ProofTooLong`, `InvalidProof`) for gas-efficient error handling
+
+**Double-Vote Prevention:** The contract maintains a `voters` mapping that tracks `hasVoted` status for each voter hash, preventing duplicate vote submission.
+
+**Vote Anonymity via Blinding Factors:** Each vote includes a cryptographically random `blindingFactor` (generated via `keccak256(randomHex(32))`) that prevents correlation between voter identity and vote content, even for parties with access to both the voter registry and blockchain data.
+
+**ZK Proof Verification:** The `castVote` function integrates with the `ElectionKeyManager` contract to verify zero-knowledge proofs before accepting votes. The verification process:
+1. Retrieves the ZKP verification key from the key manager via cross-contract call
+2. Validates proof structure and length constraints
+3. Verifies cryptographic integrity through hash-based validation
+4. Checks that curve points are valid on the BN254 elliptic curve (y² = x³ + 3 mod p)
+
+**Election State Enforcement:** Voting is only permitted when the contract state is `Voting`. State transitions are controlled by `ADMIN_ROLE` and emit `StateChanged` events for auditability.
+
+#### ElectionKeyManager Security Features
+
+The `ElectionKeyManager` contract provides secure cryptographic key management:
+
+**Key Ceremony Support:** Multi-party key ceremonies ensure no single entity controls the complete key material:
+- `initializeKeyCeremony()` sets up a ceremony with required participant count
+- `contributeToCeremony()` allows authorized participants to submit their key shares
+- `finalizeCeremony()` combines contributions to generate the final keys
+- Ceremony completion requires all required participants to contribute
+
+**Key Rotation Controls:** Keys can only be rotated after `KEY_ROTATION_INTERVAL` (30 days) has elapsed since the last rotation, preventing rapid key changes that could compromise vote integrity.
+
+**Emergency Key Reset:** The `emergencyKeyReset()` function allows `ADMIN_ROLE` to immediately reset keys in case of compromise, bypassing the rotation interval requirement. This action is logged via `EmergencyKeyReset` events.
+
+**Input Validation:** Key length validation ensures:
+- HE public keys: 64-8192 bytes
+- ZKP verification keys: 32-4096 bytes
+- Empty keys are rejected with specific error codes
+
+**Role-Based Key Management:** Only accounts with `KEY_SETTER_ROLE` can set or rotate keys. The ceremony role (`KEY_CEREMONY_ROLE`) controls participation in distributed key generation.
+
+#### Backend Service Security
+
+The `BlockchainService` implements additional security layers:
+
+**Service Account Protection:** Transaction signing uses either HSM integration or AES-256-GCM encrypted private keys. The service supports:
+- HSM-based signing (AWS CloudHSM, Azure Key Vault, HashiCorp Vault)
+- Encrypted private key decryption with PBKDF2 key derivation (100,000 iterations)
+- Fallback warning when secure signing is not configured
+
+**Transaction Retry with Exponential Backoff:** Failed transactions retry up to 3 times with exponential backoff and jitter, protecting against transient network issues while preventing infinite retry loops.
+
+**Nonce Management:** Cached nonce tracking with TTL prevents nonce conflicts during concurrent transaction submission. The cache is automatically cleared on conflict detection.
+
+**Circuit Breaker Pattern:** The blockchain module implements circuit breaker logic with configurable failure thresholds (default: 5 failures), success thresholds (default: 2 successes), and reset timeout (default: 30 seconds) to prevent cascading failures.
+
+**Graceful Degradation:** When the blockchain network is unavailable, the service continues operating in degraded mode, queuing transactions for later submission rather than failing completely.
+
+### 6.4 Smart Contract Upgrade Security
 
 Upgrade mechanisms are implemented using proxy patterns that allow contract logic updates without disrupting the underlying vote data. The upgrade process requires multi-signature authorization from designated Super Administrators, with a timelock delay allowing for review before upgrades take effect. Previous contract versions are archived for audit purposes.
 
@@ -326,7 +393,7 @@ For security vulnerability reports or security-related inquiries, contact the IE
 
 ---
 
-*Document Version: 1.0*  
-*Last Updated: March 2026*  
+*Document Version: 2.0*  
+*Last Updated: April 2026*  
 *Classification: IEBC Internal Use Only*  
 *Review Schedule: Quarterly or following significant system changes*

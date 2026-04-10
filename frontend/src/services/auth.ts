@@ -39,6 +39,7 @@ export interface RegisterData {
   ward?: string;
   phoneNumber: string;
   email?: string;
+  password?: string;
 }
 
 // ===========================================
@@ -168,33 +169,20 @@ export async function getCurrentUser(): Promise<User> {
 
 /**
  * Register a new voter
+ * 
+ * The backend creates the voter record but does NOT auto-login.
+ * After successful registration, the user should be redirected to the login page
+ * to authenticate with their new credentials.
  */
-export async function register(data: RegisterData): Promise<AuthResponse> {
+export async function register(data: RegisterData): Promise<{ id: string }> {
   try {
-    const response = await api.post<ApiResponse<{ id: string }>>('/voters/register', data);
+    const response = await api.post<{ voterId: string; status: string; message: string }>('/voters/register', data);
 
-    // Backend creates voter but doesn't auto-login
-    // Return a minimal response - user needs to login after registration
-    const mockUser: User = {
-      id: response.data?.id || '',
-      email: data.email || '',
-      role: 'voter',
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phoneNumber,
-      county: data.county,
-      constituency: data.constituency,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (response?.voterId) {
+      return { id: response.voterId };
+    }
 
-    return {
-      user: mockUser,
-      token: '',
-      refreshToken: '',
-      expiresIn: 0,
-    };
+    throw new Error('Registration succeeded but no user ID was returned');
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Registration failed');
@@ -334,7 +322,7 @@ function buildUserFromToken(token: string, userType: string): User {
     return {
       id: payload.sub || '',
       email: payload.email || '',
-      role: userType === 'admin' ? 'super_admin' : (userType as User['role']),
+      role: userType === 'admin' ? 'super_admin' : userType === 'ro' ? 'returning_officer' : (userType as User['role']),
       firstName: '',
       lastName: '',
       status: 'active',

@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -15,11 +15,13 @@ import {
   XMarkIcon,
   MoonIcon,
   SunIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { useTheme } from '@/hooks/use-theme';
 import NotificationDropdown from '@/components/layout/NotificationDropdown';
+import roService from '@/services/ro';
 
 interface ROLayoutProps {
   children: ReactNode;
@@ -29,6 +31,8 @@ const navItems = [
   { href: '/ro/dashboard', label: 'Dashboard', icon: HomeIcon },
   { href: '/ro/voters', label: 'Voters', icon: UsersIcon },
   { href: '/ro/candidates', label: 'Candidates', icon: UserGroupIcon },
+  { href: '/ro/geographic', label: 'Counties & Wards', icon: ClipboardDocumentListIcon },
+  { href: '/ro/proposals', label: 'My Proposals', icon: MapPinIcon },
 ];
 
 export default function ROLayout({ children }: ROLayoutProps) {
@@ -43,8 +47,27 @@ export default function ROLayout({ children }: ROLayoutProps) {
     window.location.href = '/auth/login';
   };
 
-  // Mock county data
-  const county = 'Nairobi';
+  // Load RO's assigned county from API
+  const [county, setCounty] = useState<string>('');
+
+  useEffect(() => {
+    async function loadCounty() {
+      try {
+        const stats = await roService.getDashboardStats();
+        if (stats.assignedCounty?.name) {
+          setCounty(stats.assignedCounty.name);
+        } else if (user?.county) {
+          setCounty(user.county);
+        }
+      } catch {
+        // Fall back to user data
+        if (user?.county) {
+          setCounty(user.county);
+        }
+      }
+    }
+    loadCounty();
+  }, [user?.county]);
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
@@ -130,18 +153,17 @@ export default function ROLayout({ children }: ROLayoutProps) {
 
         {/* Bottom Section */}
         <div className="absolute bottom-16 left-0 right-0 px-3 space-y-1">
-          <Link
-            href="/ro/settings"
-            onClick={() => setMobileOpen(false)}
+          <button
+            onClick={handleLogout}
             className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg',
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full',
               'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-700',
               sidebarCollapsed ? 'justify-center' : ''
             )}
           >
-            <Cog6ToothIcon className="w-6 h-6 flex-shrink-0" />
-            {!sidebarCollapsed && <span className="font-medium">Settings</span>}
-          </Link>
+            <ArrowRightOnRectangleIcon className="w-6 h-6 flex-shrink-0" />
+            {!sidebarCollapsed && <span className="font-medium">Sign Out</span>}
+          </button>
         </div>
 
         {/* Collapse Button */}

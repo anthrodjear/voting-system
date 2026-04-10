@@ -9,6 +9,7 @@ const ROLE_ROUTES = {
   super_admin: '/admin',
   admin: '/admin',
   returning_officer: '/ro',
+  ro: '/ro',
   sub_ro: '/ro',
   voter: '/voter',
 } as const;

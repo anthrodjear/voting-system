@@ -19,6 +19,8 @@ import { AppModule } from './app.module';
 import { ValidationPipeCustom } from './common/pipes/validation.pipe';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 const logger = new Logger('Bootstrap');
 
@@ -27,7 +29,7 @@ const logger = new Logger('Bootstrap');
  */
 async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule, {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     });
 
@@ -73,6 +75,16 @@ async function bootstrap() {
 
     // Global interceptor
     app.useGlobalInterceptors(new LoggingInterceptor());
+
+    // Serve static files (uploads)
+    app.useStaticAssets(join(process.cwd(), 'uploads'), {
+      prefix: '/uploads/',
+    });
+
+    // Serve static files (uploads)
+    app.useStaticAssets(join(process.cwd(), 'uploads'), {
+      prefix: '/uploads/',
+    });
 
     // Swagger documentation
     const config = new DocumentBuilder()

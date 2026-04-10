@@ -10,6 +10,7 @@ import type {
   ReturningOfficer,
   User,
   County,
+  ApiResponse,
 } from '@/types';
 
 // ===========================================
@@ -703,6 +704,57 @@ export async function getCandidates(params?: {
   }
 }
 
+export async function createCandidate(data: {
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  position: string;
+  countyId?: string;
+  countyName?: string;
+  constituencyId?: string;
+  wardId?: string;
+  partyName?: string;
+  partyAbbreviation?: string;
+  isIndependent?: boolean;
+  dateOfBirth?: string;
+  photo?: string;
+  manifesto?: string;
+  electionId?: string;
+}): Promise<any> {
+  try {
+    const result = await api.post<any>('/admin/candidates', data);
+    return result;
+  } catch (error) {
+    if (error instanceof ApiException) {
+      throw new Error(error.message || 'Failed to create candidate');
+    }
+    throw error;
+  }
+}
+
+export async function updateCandidate(
+  id: string,
+  data: {
+    firstName?: string;
+    lastName?: string;
+    middleName?: string;
+    partyName?: string;
+    partyAbbreviation?: string;
+    photo?: string;
+    manifesto?: string;
+  }
+): Promise<any> {
+  try {
+    const result = await api.put<any>(`/admin/candidates/${id}`, data);
+    return result;
+  } catch (error) {
+    if (error instanceof ApiException) {
+      throw new Error(error.message || 'Failed to update candidate');
+    }
+    throw error;
+  }
+}
+
 export async function approveCandidate(id: string): Promise<void> {
   try {
     await api.patch(`/admin/candidates/${id}/status`, { status: 'approved' });
@@ -863,7 +915,7 @@ export async function updateAdminUserStatus(id: string, isActive: boolean): Prom
 
 export async function getSystemHealth(): Promise<SystemHealth> {
   try {
-    const response = await api.get<ApiResponse<SystemHealth>>('/admin/system/health');
+    const response = await api.get<SystemHealth>('/admin/system/health');
     // api.get() already unwraps response.data.data, so response IS the SystemHealth object
     return response || {
       api: { status: 'unknown', message: '' },
@@ -950,6 +1002,8 @@ export default {
   deleteElection,
   // Candidates
   getCandidates,
+  createCandidate,
+  updateCandidate,
   approveCandidate,
   rejectCandidate,
   deleteCandidate,
@@ -965,4 +1019,5 @@ export default {
   // System
   getSystemHealth,
   getAuditLogs,
+  clearAuditLogs,
 };

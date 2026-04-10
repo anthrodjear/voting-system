@@ -16,23 +16,16 @@ import type {
 // ===========================================
 
 export interface RODashboardStats {
-  county: string;
-  voters: {
-    total: number;
-    registered: number;
-    verified: number;
-    pending: number;
-  };
-  votes: {
-    total: number;
-    turnout: number;
-    lastHour: number;
-  };
-  batches: {
-    active: number;
-    waiting: number;
-    completed: number;
-  };
+  totalVoters: number;
+  verifiedVoters: number;
+  pendingVoters: number;
+  totalVotes: number;
+  assignedCounty: {
+    id: string;
+    name: string;
+    code: string;
+    region: string;
+  } | null;
 }
 
 export interface PendingApproval {
@@ -95,19 +88,8 @@ export interface VoterManagementFilter {
  */
 export async function getDashboardStats(): Promise<RODashboardStats> {
   try {
-    const response = await api.get<ApiResponse<RODashboardStats>>('/ro/dashboard/stats');
-    
-    if (response.data) {
-      return response.data;
-    }
-    
-    // Return default stats
-    return {
-      county: '',
-      voters: { total: 0, registered: 0, verified: 0, pending: 0 },
-      votes: { total: 0, turnout: 0, lastHour: 0 },
-      batches: { active: 0, waiting: 0, completed: 0 },
-    };
+    const data = await api.get<RODashboardStats>('/ro/dashboard/stats');
+    return data;
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to get dashboard stats');
@@ -121,14 +103,14 @@ export async function getDashboardStats(): Promise<RODashboardStats> {
  */
 export async function getPendingApprovals(
   params?: { type?: string; page?: number; pageSize?: number }
-): Promise<PendingApproval[]> {
+): Promise<{ pendingVoters: any[]; pendingCandidates: any[] }> {
   try {
-    const response = await api.get<ApiResponse<PendingApproval[]>>(
+    const data = await api.get<{ pendingVoters: any[]; pendingCandidates: any[] }>(
       '/ro/pending-approvals',
       { params: params as Record<string, string | number | boolean | undefined> }
     );
     
-    return response.data || [];
+    return data || { pendingVoters: [], pendingCandidates: [] };
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to get pending approvals');
@@ -142,12 +124,12 @@ export async function getPendingApprovals(
  */
 export async function getVotingProgress(electionId?: string): Promise<VotingProgress[]> {
   try {
-    const response = await api.get<ApiResponse<VotingProgress[]>>(
+    const data = await api.get<VotingProgress[]>(
       '/ro/voting-progress',
       { params: electionId ? { electionId } : undefined }
     );
     
-    return response.data || [];
+    return data || [];
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to get voting progress');
@@ -169,17 +151,17 @@ export async function getCountyVoters(
   totalPages: number;
 }> {
   try {
-    const response = await api.get<ApiResponse<{
+    const data = await api.get<{
       data: CountyVoter[];
       total: number;
       page: number;
       pageSize: number;
       totalPages: number;
-    }>>('/ro/voters', { 
+    }>('/ro/voters', { 
       params: params as Record<string, string | number | boolean | undefined> 
     });
     
-    return response.data || {
+    return data || {
       data: [],
       total: 0,
       page: 1,
@@ -229,12 +211,12 @@ export async function getActiveBatches(
   params?: { status?: string; limit?: number }
 ): Promise<Batch[]> {
   try {
-    const response = await api.get<ApiResponse<Batch[]>>(
+    const data = await api.get<Batch[]>(
       '/ro/batches/active',
       { params: params as Record<string, string | number | boolean | undefined> }
     );
     
-    return response.data || [];
+    return data || [];
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to get active batches');
@@ -248,10 +230,10 @@ export async function getActiveBatches(
  */
 export async function getBatchById(batchId: string): Promise<Batch> {
   try {
-    const response = await api.get<ApiResponse<Batch>>(`/ro/batches/${batchId}`);
+    const data = await api.get<Batch>(`/ro/batches/${batchId}`);
     
-    if (response.data) {
-      return response.data;
+    if (data) {
+      return data;
     }
     
     throw new Error('Batch not found');
@@ -282,9 +264,9 @@ export async function closeBatch(batchId: string): Promise<void> {
  */
 export async function getCountyElections(): Promise<Election[]> {
   try {
-    const response = await api.get<ApiResponse<Election[]>>('/ro/elections');
+    const data = await api.get<Election[]>('/ro/elections');
     
-    return response.data || [];
+    return data || [];
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to get county elections');
@@ -310,7 +292,7 @@ export async function getVoterStatistics(): Promise<{
   }>;
 }> {
   try {
-    const response = await api.get<ApiResponse<{
+    const data = await api.get<{
       total: number;
       registered: number;
       verified: number;
@@ -322,9 +304,9 @@ export async function getVoterStatistics(): Promise<{
         registered: number;
         verified: number;
       }>;
-    }>>('/ro/voters/statistics');
+    }>('/ro/voters/statistics');
     
-    return response.data || {
+    return data || {
       total: 0,
       registered: 0,
       verified: 0,
@@ -351,17 +333,17 @@ export async function getVotingStatistics(electionId?: string): Promise<{
   byHour: Array<{ hour: string; votes: number }>;
 }> {
   try {
-    const response = await api.get<ApiResponse<{
+    const data = await api.get<{
       totalRegistered: number;
       totalVoted: number;
       turnout: number;
       lastHour: number;
       byHour: Array<{ hour: string; votes: number }>;
-    }>>('/ro/voting/statistics', { 
+    }>('/ro/voting/statistics', { 
       params: electionId ? { electionId } : undefined 
     });
     
-    return response.data || {
+    return data || {
       totalRegistered: 0,
       totalVoted: 0,
       turnout: 0,
@@ -390,19 +372,100 @@ export async function getRecentActivity(
   user?: string;
 }>> {
   try {
-    const response = await api.get<ApiResponse<Array<{
+    const data = await api.get<Array<{
       id: string;
       type: string;
       action: string;
       details: string;
       timestamp: string;
       user?: string;
-    }>>>('/ro/activity', { params: { limit } });
+    }>>('/ro/activity', { params: { limit } });
     
-    return response.data || [];
+    return data || [];
   } catch (error) {
     if (error instanceof ApiException) {
       throw new Error(error.message || 'Failed to get recent activity');
+    }
+    throw error;
+  }
+}
+
+export interface CountyCandidate {
+  id: string;
+  candidateNumber: string;
+  firstName: string;
+  lastName: string;
+  partyName: string;
+  partyAbbreviation: string;
+  position: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt?: string;
+  approvedAt?: string;
+}
+
+/**
+ * Get candidates in the returning officer's county
+ */
+export async function getCountyCandidates(): Promise<CountyCandidate[]> {
+  try {
+    const data = await api.get<CountyCandidate[]>('/ro/candidates');
+    return data || [];
+  } catch (error) {
+    if (error instanceof ApiException) {
+      throw new Error(error.message || 'Failed to get candidates');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Create a new candidate for the RO's county
+ */
+export async function createCandidate(data: {
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  position: string;
+  partyName: string;
+  partyAbbreviation?: string;
+  isIndependent?: boolean;
+  constituencyId?: string;
+  wardId?: string;
+}): Promise<CountyCandidate> {
+  try {
+    const result = await api.post<CountyCandidate>('/ro/candidates', data);
+    return result;
+  } catch (error) {
+    if (error instanceof ApiException) {
+      throw new Error(error.message || 'Failed to create candidate');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Approve a candidate
+ */
+export async function approveCandidate(candidateId: string): Promise<void> {
+  try {
+    await api.post(`/ro/candidates/${candidateId}/approve`);
+  } catch (error) {
+    if (error instanceof ApiException) {
+      throw new Error(error.message || 'Failed to approve candidate');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Reject a candidate
+ */
+export async function rejectCandidate(candidateId: string, reason: string): Promise<void> {
+  try {
+    await api.post(`/ro/candidates/${candidateId}/reject`, { reason });
+  } catch (error) {
+    if (error instanceof ApiException) {
+      throw new Error(error.message || 'Failed to reject candidate');
     }
     throw error;
   }
@@ -440,6 +503,10 @@ export default {
   getCountyVoters,
   verifyVoter,
   rejectVoter,
+  getCountyCandidates,
+  createCandidate,
+  approveCandidate,
+  rejectCandidate,
   getActiveBatches,
   getBatchById,
   closeBatch,

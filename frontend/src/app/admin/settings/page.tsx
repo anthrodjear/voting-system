@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Cog6ToothIcon,
   BellIcon,
@@ -16,12 +16,49 @@ import {
   ComputerDesktopIcon,
   CheckIcon,
 } from '@heroicons/react/24/outline';
-import { Card, Button, Input, Select, Badge } from '@/components/ui';
+import { Card, Button, Input, Select, Badge, Alert } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/use-theme';
+import { api } from '@/services/api-client';
 
-// Mock settings data
-const initialSettings = {
+interface GeneralSettings {
+  systemName: string;
+  timezone: string;
+  language: string;
+  dateFormat: string;
+}
+
+interface NotificationSettings {
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  pushNotifications: boolean;
+  electionAlerts: boolean;
+  systemUpdates: boolean;
+  dailyDigest: boolean;
+}
+
+interface SecuritySettings {
+  twoFactorRequired: boolean;
+  sessionTimeout: string;
+  passwordExpiry: string;
+  ipWhitelist: boolean;
+  auditLogging: boolean;
+}
+
+interface AppearanceSettings {
+  theme: string;
+  sidebarCollapsed: boolean;
+  compactMode: boolean;
+}
+
+interface AllSettings {
+  general: GeneralSettings;
+  notifications: NotificationSettings;
+  security: SecuritySettings;
+  appearance: AppearanceSettings;
+}
+
+const defaultSettings: AllSettings = {
   general: {
     systemName: 'IEBC Blockchain Voting System',
     timezone: 'Africa/Nairobi',
@@ -53,9 +90,33 @@ const initialSettings = {
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('general');
-  const [settings, setSettings] = useState(initialSettings);
+  const [settings, setSettings] = useState<AllSettings>(defaultSettings);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load settings from API on mount
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await api.get<AllSettings>('/settings');
+        if (response) {
+          setSettings(response);
+          // Sync theme from loaded settings
+          if (response.appearance.theme !== theme) {
+            setTheme(response.appearance.theme as 'light' | 'dark' | 'system');
+          }
+        }
+      } catch (err: any) {
+        // Fall back to defaults if API fails
+        console.warn('Failed to load settings from API, using defaults:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const tabs = [
     { id: 'general', label: 'General', icon: Cog6ToothIcon },
@@ -66,11 +127,17 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaveError(null);
+    try {
+      // Save settings to backend API
+      await api.patch('/settings', settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateSettings = (category: string, key: string, value: any) => {
@@ -83,6 +150,25 @@ export default function SettingsPage() {
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Settings</h1>
+            <p className="text-neutral-500 dark:text-neutral-400 mt-1">
+              Manage your system preferences and configurations
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <ArrowPathIcon className="w-8 h-8 animate-spin text-neutral-400" />
+          <span className="ml-3 text-neutral-500">Loading settings...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -94,6 +180,11 @@ export default function SettingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {saveError && (
+            <Badge variant="error" className="animate-fade-in">
+              {saveError}
+            </Badge>
+          )}
           {saved && (
             <Badge variant="success" className="animate-fade-in">
               Settings saved successfully

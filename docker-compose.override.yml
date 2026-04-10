@@ -1,0 +1,74 @@
+# =============================================================================
+# Docker Compose Override for Development
+# =============================================================================
+# This file is automatically loaded by docker-compose when present.
+# It contains development-specific settings that extend docker-compose.yml.
+#
+# Usage:
+#   docker-compose up -d              # Uses both docker-compose.yml and this file
+#   docker-compose -f docker-compose.yml up -d  # Production only (no override)
+# =============================================================================
+
+services:
+  # Backend API (Development overrides)
+  backend:
+    # Mount source code for hot reload
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    # Override command to ensure proper signal handling
+    command: ["npm", "run", "start:dev"]
+    # Enable interactive mode for debugging
+    stdin_open: true
+    tty: true
+    # Development environment variables
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+      # Enable detailed error messages
+      - DEBUG=voting-system:*
+    # Expose additional debugging ports
+    ports:
+      - "9229:9229"  # Node.js debugger port
+
+  # Frontend (Development overrides)
+  frontend:
+    # Mount source code for hot reload
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    # Override command for development
+    command: ["npm", "run", "dev"]
+    # Enable interactive mode
+    stdin_open: true
+    tty: true
+    # Development environment variables
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+      # Enable source maps
+      - NEXT_SOURCE_MAPS=true
+    # Expose additional debugging ports
+    ports:
+      - "9230:9230"  # Next.js debugger port
+
+  # PostgreSQL (No overrides needed - already configured)
+  postgres:
+    # Ensure proper locale settings
+    environment:
+      - LC_ALL=en_US.UTF-8
+      - LANG=en_US.UTF-8
+
+  # Redis (No overrides needed - already configured)
+  redis:
+    # Development-friendly logging
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --loglevel verbose
+
+# Development-specific volumes
+volumes:
+  # Override volume settings if needed
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

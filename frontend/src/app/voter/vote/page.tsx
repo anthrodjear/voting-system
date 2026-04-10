@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   CheckCircleIcon,
@@ -8,99 +8,206 @@ import {
   LockClosedIcon,
   ExclamationTriangleIcon,
   ArrowRightIcon,
-  ShieldCheckIcon,
-  ClipboardDocumentCheckIcon
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import { Button, Card, Badge, Modal, Progress, Alert } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores/auth.store';
-import { useVotingStore } from '@/stores/voting.store';
-import { getCurrentElection, joinBatch, getBatchStatus, submitVote, getLiveResults } from '@/services';
+import { getUpcomingElections, getElectionPositions, getPositionCandidates, joinBatch, getBatchStatus, submitVote } from '@/services';
+import type { Election, Position, Candidate } from '@/types';
 
-// Mock election data
-const election = {
-  id: '1',
-  name: 'General Election 2027',
-  status: 'voting_open' as const,
-  positions: [
-    {
-      id: '1',
-      title: 'President',
-      description: 'Elect the President of Kenya',
-      candidates: [
-        { id: '1', name: 'Candidate A', party: 'Party A', photo: null },
-        { id: '2', name: 'Candidate B', party: 'Party B', photo: null },
-        { id: '3', name: 'Candidate C', party: 'Party C', photo: null },
-      ],
-    },
-    {
-      id: '2',
-      title: 'Governor - Nairobi',
-      description: 'Elect the Governor of Nairobi County',
-      candidates: [
-        { id: '4', name: 'Candidate D', party: 'Party A', photo: null },
-        { id: '5', name: 'Candidate E', party: 'Party D', photo: null },
-      ],
-    },
-  ],
-};
-
-// Mock batch status
-const batchStatus = {
-  status: 'active' as const,
-  position: 1,
-  totalPositions: 2,
-  timeRemaining: 300, // 5 minutes in seconds
-};
+interface BallotPosition extends Position {
+  candidates: Candidate[];
+}
 
 export default function VotePage() {
   const router = useRouter();
+  const [election, setElection] = useState<Election | null>(null);
+  const [ballotPositions, setBallotPositions] = useState<BallotPosition[]>([]);
+  const [batchStatusData, setBatchStatusData] = useState<{
+    status: string;
+    position: number;
+    totalPositions: number;
+    timeRemaining: number;
+  } | null>(null);
   const [selectedCandidates, setSelectedCandidates] = useState<Record<string, string>>({});
   const [currentPositionIndex, setCurrentPositionIndex] = useState(0);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voteConfirmed, setVoteConfirmed] = useState(false);
   const [confirmationNumber, setConfirmationNumber] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const currentPosition = election.positions[currentPositionIndex];
+  // Fetch election and ballot data on mount
+  useEffect(() => {
+    const loadElectionAndBallot = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch upcoming elections
+        const elections = await getUpcomingElections();
+        if (!elections || elections.length === 0) {
+          setError('No upcoming elections found');
+          return;
+        }
+        
+        // Use the first upcoming election
+        const activeElection = elections[0];
+        setElection(activeElection);
+        
+        // Fetch ballot positions
+        const positions = await getElectionPositions(activeElection.id);
+        
+        // Fetch candidates for each position
+        const positionsWithCandidates: BallotPosition[] = await Promise.all(
+          positions.map(async (position) => {
+            const candidates = await getPositionCandidates(activeElection.id, position.id);
+            return { ...position, candidates };
+          })
+        );
+        
+        setBallotPositions(positionsWithCandidates);
+        
+        // Join voting batch
+        const batch = await joinBatch(activeElection.id);
+        
+        // Calculate time remaining from election dates
+        const timeRemaining = activeElection.endDate
+          ? Math.max(0, Math.floor((new Date(activeElection.endDate).getTime() - Date.now()) / 1000))
+          : 300;
+        
+        setBatchStatusData({
+          status: 'active',
+          position: 1,
+          totalPositions: positionsWithCandidates.length,
+          timeRemaining,
+        });
+      } catch (err: any) {
+        setError(err.message || 'Failed to load election data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadElectionAndBallot();
+  }, []);
 
-  const handleSelectCandidate = (candidateId: string) => {
+  // Countdown timer
+  useEffect(() => {
+    if (!batchStatusData || batchStatusData.timeRemaining <= 0) return;
+    
+    const timer = setInterval(() => {
+      setBatchStatusData(prev => {
+        if (!prev || prev.timeRemaining <= 0) return prev;
+        return { ...prev, timeRemaining: prev.timeRemaining - 1 };
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [batchStatusData]);
+
+  const currentPosition = ballotPositions[currentPositionIndex];
+
+  const handleSelectCandidate = useCallback((candidateId: string) => {
     setSelectedCandidates(prev => ({
       ...prev,
-      [currentPosition.id]: candidateId,
+      [currentPosition?.id]: candidateId,
     }));
-  };
+  }, [currentPosition?.id]);
 
-  const handleNextPosition = () => {
-    if (currentPositionIndex < election.positions.length - 1) {
+  const handleNextPosition = useCallback(() => {
+    if (currentPositionIndex < ballotPositions.length - 1) {
       setCurrentPositionIndex(prev => prev + 1);
     } else {
       setShowConfirmation(true);
     }
-  };
+  }, [currentPositionIndex, ballotPositions.length]);
 
-  const handlePreviousPosition = () => {
+  const handlePreviousPosition = useCallback(() => {
     if (currentPositionIndex > 0) {
       setCurrentPositionIndex(prev => prev - 1);
     }
-  };
+  }, [currentPositionIndex]);
 
-  const handleSubmitVote = async () => {
+  const handleSubmitVote = useCallback(async () => {
+    if (!election) return;
+    
     setIsSubmitting(true);
     try {
-      // Simulate vote submission
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Build vote data for each selected candidate
+      const votePromises = Object.entries(selectedCandidates).map(async ([positionId, candidateId]) => {
+        return submitVote({
+          electionId: election.id,
+          positionId,
+          candidateId,
+          encryptedVote: btoa(JSON.stringify({ positionId, candidateId, timestamp: Date.now() })),
+          zkProof: '', // TODO: Generate actual ZK proof
+        });
+      });
       
-      // Generate confirmation number
-      const confNum = `VOTE-${Date.now().toString(36).toUpperCase()}`;
+      const results = await Promise.all(votePromises);
+      
+      // Use first confirmation number
+      const confNum = results[0]?.confirmationNumber || `VOTE-${Date.now().toString(36).toUpperCase()}`;
       setConfirmationNumber(confNum);
       setVoteConfirmed(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit vote');
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [election, selectedCandidates]);
 
-  const canProceed = selectedCandidates[currentPosition.id];
+  const canProceed = currentPosition && selectedCandidates[currentPosition.id];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <Card padding="lg" className="shadow-xl text-center">
+          <div className="animate-pulse">
+            <div className="h-8 bg-neutral-200 rounded w-1/3 mx-auto mb-4"></div>
+            <div className="h-4 bg-neutral-200 rounded w-2/3 mx-auto mb-8"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 bg-neutral-200 rounded-xl"></div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !election) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card padding="lg" className="shadow-xl text-center">
+          <ExclamationTriangleIcon className="w-16 h-16 text-error mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Unable to Load Election</h2>
+          <p className="text-neutral-600 mb-6">{error}</p>
+          <Button onClick={() => router.push('/voter/dashboard')}>
+            Return to Dashboard
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!election || ballotPositions.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card padding="lg" className="shadow-xl text-center">
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">No Active Election</h2>
+          <p className="text-neutral-600 mb-6">There are no elections currently open for voting.</p>
+          <Button onClick={() => router.push('/voter/dashboard')}>
+            Return to Dashboard
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   // If vote is confirmed, show confirmation screen
   if (voteConfirmed) {
@@ -154,19 +261,23 @@ export default function VotePage() {
           <div className="text-right">
             <div className="flex items-center gap-2 mb-1">
               <ClockIcon className="w-5 h-5" />
-              <span className="font-mono text-lg">{Math.floor(batchStatus.timeRemaining / 60)}:{(batchStatus.timeRemaining % 60).toString().padStart(2, '0')}</span>
+              <span className="font-mono text-lg">
+                {batchStatusData ? `${Math.floor(batchStatusData.timeRemaining / 60)}:${(batchStatusData.timeRemaining % 60).toString().padStart(2, '0')}` : '--:--'}
+              </span>
             </div>
             <p className="text-sm text-voter-100">Time remaining</p>
           </div>
         </div>
         
-        <div className="mt-4">
-          <div className="flex justify-between text-sm mb-2">
-            <span>Position {batchStatus.position} of {batchStatus.totalPositions}</span>
-            <span>{Math.round((batchStatus.position / batchStatus.totalPositions) * 100)}%</span>
+        {batchStatusData && (
+          <div className="mt-4">
+            <div className="flex justify-between text-sm mb-2">
+              <span>Position {batchStatusData.position} of {batchStatusData.totalPositions}</span>
+              <span>{Math.round((batchStatusData.position / batchStatusData.totalPositions) * 100)}%</span>
+            </div>
+            <Progress value={batchStatusData.position} max={batchStatusData.totalPositions} variant="warning" />
           </div>
-          <Progress value={batchStatus.position} max={batchStatus.totalPositions} variant="warning" />
-        </div>
+        )}
       </Card>
 
       {/* Security Notice */}
@@ -183,7 +294,7 @@ export default function VotePage() {
       {/* Current Position Ballot */}
       <Card padding="lg">
         <div className="mb-6">
-          <Badge variant="info" className="mb-2">Position {currentPositionIndex + 1} of {election.positions.length}</Badge>
+          <Badge variant="info" className="mb-2">Position {currentPositionIndex + 1} of {ballotPositions.length}</Badge>
           <h2 className="text-2xl font-bold text-neutral-900">{currentPosition.title}</h2>
           <p className="text-neutral-500">{currentPosition.description}</p>
         </div>
@@ -239,7 +350,7 @@ export default function VotePage() {
             onClick={handleNextPosition}
             disabled={!canProceed}
           >
-            {currentPositionIndex === election.positions.length - 1 ? 'Review Vote' : 'Next Position'}
+            {currentPositionIndex === ballotPositions.length - 1 ? 'Review Vote' : 'Next Position'}
             <ArrowRightIcon className="w-5 h-5 ml-2" />
           </Button>
         </div>
@@ -268,7 +379,7 @@ export default function VotePage() {
           </p>
           
           <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
-            {election.positions.map((position, index) => (
+            {ballotPositions.map((position, index) => (
               <div key={position.id} className="flex justify-between items-center">
                 <span className="text-neutral-500">{position.title}</span>
                 <span className="font-medium">

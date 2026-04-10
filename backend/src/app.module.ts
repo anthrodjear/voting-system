@@ -24,6 +24,9 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { BlockchainModule } from './modules/blockchain/blockchain.module';
 import { RoModule } from './modules/ro/ro.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { GeographicModule } from './modules/geographic/geographic.module';
+import { UploadModule } from './modules/admin/upload.module';
 
 /**
  * Health Module
@@ -60,7 +63,7 @@ import { ThrottlerGuard } from './common/guards/throttler.guard';
         host: configService.get<string>('DB_HOST', 'localhost'),
         port: parseInt(configService.get<string>('DB_PORT', '5432'), 10),
         username: configService.get<string>('DB_USERNAME', 'postgres'),
-        password: configService.get<string>('DB_PASSWORD', 'postgres'),
+        password: configService.get<string>('DB_PASSWORD') || (() => { throw new Error('DB_PASSWORD environment variable is required. Set it in your .env file.'); })(),
         database: configService.get<string>('DB_DATABASE', 'voting_system'),
         entities: [__dirname + '/entities/*.entity{.ts,.js}'],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
@@ -95,19 +98,23 @@ import { ThrottlerGuard } from './common/guards/throttler.guard';
       inject: [ConfigService],
     }),
 
-    /**
-     * Feature Modules
-     */
-    AuthModule,
-    VoterModule,
-    CandidateModule,
-    VoteModule,
-    BatchModule,
-    AdminModule,
-    ReportingModule,
-    BlockchainModule,
-    RoModule,
-    HealthModule,
+     /**
+      * Feature Modules
+      */
+     AuthModule,
+     VoterModule,
+     CandidateModule,
+     VoteModule,
+     BatchModule,
+     AdminModule,
+     ReportingModule,
+     BlockchainModule,
+     RoModule,
+     NotificationModule,
+     HealthModule,
+     GeographicModule,
+     UploadModule,
+     UploadModule,
   ],
   
   providers: [

@@ -54,11 +54,11 @@ export interface VoterFilterParams {
  */
 export async function checkIdAvailability(nationalId: string): Promise<boolean> {
   try {
-    const response = await api.get<ApiResponse<{ available: boolean }>>(
+    const response = await api.get<{ available: boolean }>(
       `/voters/check-id/${nationalId}`
     );
     
-    return response.data?.available ?? false;
+    return response?.available ?? false;
   } catch (error) {
     if (error instanceof ApiException) {
       // If error, assume not available
@@ -77,12 +77,12 @@ export async function checkIdAvailability(nationalId: string): Promise<boolean> 
  */
 export async function lookupNiif(nationalId: string): Promise<NiifLookupResult> {
   try {
-    const response = await api.get<ApiResponse<NiifLookupResult>>(
+    const response = await api.get<NiifLookupResult>(
       `/voters/lookup-niif/${nationalId}`
     );
 
-    if (response.data) {
-      return response.data;
+    if (response) {
+      return response;
     }
 
     return { found: false };
@@ -102,13 +102,13 @@ export async function lookupNiif(nationalId: string): Promise<NiifLookupResult> 
  */
 export async function register(voterData: VoterRegistrationData): Promise<VoterProfile> {
   try {
-    const response = await api.post<ApiResponse<VoterProfile>>(
+    const response = await api.post<VoterProfile>(
       '/voters/register',
       voterData
     );
     
-    if (response.data) {
-      return response.data;
+    if (response) {
+      return response;
     }
     
     throw new Error('Failed to register voter');
@@ -125,10 +125,10 @@ export async function register(voterData: VoterRegistrationData): Promise<VoterP
  */
 export async function getProfile(): Promise<VoterProfile> {
   try {
-    const response = await api.get<ApiResponse<VoterProfile>>('/voters/profile');
+    const response = await api.get<VoterProfile>('/voters/profile');
     
-    if (response.data) {
-      return response.data;
+    if (response) {
+      return response;
     }
     
     throw new Error('Failed to get voter profile');
@@ -146,21 +146,14 @@ export async function getProfile(): Promise<VoterProfile> {
  */
 export async function getRegistrationStatus(): Promise<RegistrationStatusResponse> {
   try {
-    const response = await api.get<ApiResponse<VoterProfile>>(
-      '/voters/profile'
-    );
+    const profile = await api.get<VoterProfile>('/voters/profile');
 
-    if (response.data) {
-      const profile = response.data;
-      return {
-        status: profile.registrationStatus || profile.status || 'not_registered',
-        message: profile.registrationMessage,
-        registeredAt: profile.registeredAt,
-        verifiedAt: profile.verifiedAt,
-      };
-    }
-
-    return { status: 'not_registered' };
+    return {
+      status: profile.registrationStatus || profile.status || 'not_registered',
+      message: profile.registrationMessage,
+      registeredAt: profile.registeredAt,
+      verifiedAt: profile.verifiedAt,
+    };
   } catch (error) {
     if (error instanceof ApiException) {
       // If not found, user is not registered
@@ -178,13 +171,13 @@ export async function getRegistrationStatus(): Promise<RegistrationStatusRespons
  */
 export async function updateProfile(data: Partial<VoterProfile>): Promise<VoterProfile> {
   try {
-    const response = await api.patch<ApiResponse<VoterProfile>>(
+    const response = await api.patch<VoterProfile>(
       '/voters/profile',
       data
     );
     
-    if (response.data) {
-      return response.data;
+    if (response) {
+      return response;
     }
     
     throw new Error('Failed to update profile');
@@ -245,13 +238,13 @@ export async function getVoters(
   params: VoterFilterParams = {}
 ): Promise<PaginatedResponse<VoterProfile>> {
   try {
-    const response = await api.get<ApiResponse<PaginatedResponse<VoterProfile>>>(
+    const response = await api.get<PaginatedResponse<VoterProfile>>(
       '/voters',
       { params: params as Record<string, string | number | boolean | undefined> }
     );
     
-    if (response.data) {
-      return response.data;
+    if (response) {
+      return response;
     }
     
     return {
@@ -274,10 +267,10 @@ export async function getVoters(
  */
 export async function getVoterById(id: string): Promise<VoterProfile> {
   try {
-    const response = await api.get<ApiResponse<VoterProfile>>(`/voters/${id}`);
+    const response = await api.get<VoterProfile>(`/voters/${id}`);
     
-    if (response.data) {
-      return response.data;
+    if (response) {
+      return response;
     }
     
     throw new Error('Voter not found');
@@ -328,17 +321,17 @@ export async function getVoterStats(county?: string): Promise<{
   byCounty: Array<{ county: string; count: number }>;
 }> {
   try {
-    const response = await api.get<ApiResponse<{
+    const response = await api.get<{
       total: number;
       registered: number;
       verified: number;
       pending: number;
       byCounty: Array<{ county: string; count: number }>;
-    }>>('/voters/stats', { 
+    }>('/voters/stats', { 
       params: county ? { county } : undefined 
     });
     
-    return response.data || {
+    return response || {
       total: 0,
       registered: 0,
       verified: 0,

@@ -16,6 +16,7 @@ import {
   XMarkIcon,
   MoonIcon,
   SunIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
@@ -29,9 +30,10 @@ interface AdminLayoutProps {
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: HomeIcon },
   { href: '/admin/returning-officers', label: 'Returning Officers', icon: UsersIcon },
-  { href: '/admin/counties', label: 'Counties', icon: MapIcon },
+  { href: '/admin/counties', label: 'Counties & Wards', icon: MapIcon },
   { href: '/admin/candidates', label: 'Candidates', icon: UserGroupIcon },
   { href: '/admin/elections', label: 'Elections', icon: ClipboardDocumentListIcon },
+  { href: '/admin/pending-changes', label: 'Pending Changes', icon: ClockIcon },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

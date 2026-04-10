@@ -21,6 +21,7 @@ interface NotificationState {
   isOpen: boolean;
 
   // Actions
+  setNotifications: (notifications: AppNotification[]) => void;
   addNotification: (notification: Omit<AppNotification, 'id' | 'read' | 'createdAt'>) => void;
   addNotifications: (notifications: Omit<AppNotification, 'id' | 'read' | 'createdAt'>[]) => void;
   markAsRead: (id: string) => void;
@@ -34,6 +35,10 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>()((set) => ({
   notifications: [],
   isOpen: false,
+
+  setNotifications: (notifications) => {
+    set({ notifications });
+  },
 
   addNotification: (notification) => {
     const newNotification: AppNotification = {

@@ -14,12 +14,13 @@ import {
 import { Card, Badge, Progress, Button } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatDate } from '@/lib/utils';
-import { getRegistrationStatus, getUpcomingElections } from '@/services';
+import { getRegistrationStatus, getUpcomingElections, RegistrationStatusResponse } from '@/services';
+import { getNotifications } from '@/services/notification';
 import { useState, useEffect } from 'react';
 
 export default function VoterDashboardPage() {
   const { user } = useAuthStore();
-  const [registrationStatus, setRegistrationStatus] = useState<{ status: string }>({ status: 'not_registered' });
+  const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatusResponse>({ status: 'not_registered' });
   const [upcomingElections, setUpcomingElections] = useState<Array<any>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,25 +40,14 @@ export default function VoterDashboardPage() {
         const electionsResponse = await getUpcomingElections();
         setUpcomingElections(electionsResponse);
         
-        // For now, use mock notifications until we have a real notifications API
-        setNotifications([
-          {
-            id: '1',
-            type: 'info',
-            title: 'Registration Reminder',
-            message: 'Remember to complete your voter registration before the deadline.',
-            createdAt: new Date().toISOString(),
-            read: false,
-          },
-          {
-            id: '2',
-            type: 'success',
-            title: 'Profile Updated',
-            message: 'Your profile information has been verified successfully.',
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            read: true,
-          },
-        ]);
+        // Fetch notifications from real API
+        try {
+          const notificationsResponse = await getNotifications();
+          setNotifications(notificationsResponse);
+        } catch {
+          // Notifications fetch failure is non-critical
+          setNotifications([]);
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data');
       } finally {
@@ -72,6 +62,12 @@ export default function VoterDashboardPage() {
   const daysUntilElection = upcomingElections.length > 0 
     ? Math.ceil((new Date(upcomingElections[0].votingStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
+
+  // Check if voting is currently open
+  const hasOpenVote = upcomingElections.some(election => election.status === 'voting_open');
+  
+  // Check if voter can vote (registered and voting is open)
+  const canVote = registrationStatus.status === 'verified' && hasOpenVote;
 
   return (
     <div className="space-y-6">
@@ -96,12 +92,24 @@ export default function VoterDashboardPage() {
             <p className="text-sm text-neutral-500 mb-1">Registration Status</p>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-neutral-900">
-                {registrationStatus.status === 'verified' ? 'Verified' : 'Pending'}
+                {registrationStatus.status === 'verified' ? 'Verified' : 
+                 registrationStatus.status === 'pending' ? 'Pending Verification' :
+                 registrationStatus.status === 'rejected' ? 'Registration Rejected' :
+                 'Not Registered'}
               </span>
               {registrationStatus.status === 'verified' && (
                 <CheckCircleIcon className="w-6 h-6 text-success" />
               )}
+              {registrationStatus.status === 'pending' && (
+                <ClockIcon className="w-6 h-6 text-warning" />
+              )}
+              {registrationStatus.status === 'rejected' && (
+                <ExclamationTriangleIcon className="w-6 h-6 text-error" />
+              )}
             </div>
+            {registrationStatus.message && (
+              <p className="text-xs text-neutral-500 mt-1">{registrationStatus.message}</p>
+            )}
           </div>
         </Card>
 
@@ -126,7 +134,9 @@ export default function VoterDashboardPage() {
           <div className="flex-1">
             <p className="text-sm text-neutral-500 mb-1">Your Vote</p>
             <span className="text-2xl font-bold text-neutral-900">
-              Ready to Cast
+              {canVote ? 'Ready to Cast' : 
+               registrationStatus.status !== 'verified' ? 'Registration Required' : 
+               'Awaiting Election'}
             </span>
           </div>
         </Card>
@@ -147,13 +157,26 @@ export default function VoterDashboardPage() {
                 </div>
               </Link>
               
-              <Link href="/voter/vote">
-                <div className="p-4 border border-neutral-200 rounded-xl hover:border-success-300 hover:bg-success-light transition-all cursor-pointer">
-                  <ClipboardDocumentListIcon className="w-8 h-8 text-success mb-3" />
-                  <h4 className="font-semibold text-neutral-900 mb-1">Cast Your Vote</h4>
-                  <p className="text-sm text-neutral-500">Participate in upcoming elections</p>
+              {canVote ? (
+                <Link href="/voter/vote">
+                  <div className="p-4 border border-neutral-200 rounded-xl hover:border-success-300 hover:bg-success-light transition-all cursor-pointer">
+                    <ClipboardDocumentListIcon className="w-8 h-8 text-success mb-3" />
+                    <h4 className="font-semibold text-neutral-900 mb-1">Cast Your Vote</h4>
+                    <p className="text-sm text-neutral-500">Participate in upcoming elections</p>
+                  </div>
+                </Link>
+              ) : (
+                <div className="p-4 border border-neutral-200 rounded-xl bg-neutral-50 cursor-not-allowed">
+                  <ClipboardDocumentListIcon className="w-8 h-8 text-neutral-400 mb-3" />
+                  <h4 className="font-semibold text-neutral-500 mb-1">Cast Your Vote</h4>
+                  <p className="text-sm text-neutral-400">
+                    {!hasOpenVote 
+                      ? 'No elections currently open for voting' 
+                      : 'Complete registration to vote'
+                    }
+                  </p>
                 </div>
-              </Link>
+              )}
             </div>
           </Card>
 
@@ -249,17 +272,37 @@ export default function VoterDashboardPage() {
 
           {/* Registration Reminder */}
           {registrationStatus.status !== 'verified' && (
-            <Card className="bg-warning-light border-l-4 border-l-warning">
+            <Card className={`border-l-4 ${
+              registrationStatus.status === 'rejected' 
+                ? 'bg-error-light border-l-error' 
+                : 'bg-warning-light border-l-warning'
+            }`}>
               <div className="flex items-start gap-3">
-                <ExclamationTriangleIcon className="w-6 h-6 text-warning flex-shrink-0" />
+                <ExclamationTriangleIcon className={`w-6 h-6 flex-shrink-0 ${
+                  registrationStatus.status === 'rejected' ? 'text-error' : 'text-warning'
+                }`} />
                 <div>
-                  <h4 className="font-semibold text-neutral-900 mb-1">Complete Your Registration</h4>
+                  <h4 className="font-semibold text-neutral-900 mb-1">
+                    {registrationStatus.status === 'rejected' 
+                      ? 'Registration Rejected' 
+                      : registrationStatus.status === 'pending'
+                      ? 'Registration Pending'
+                      : 'Complete Your Registration'}
+                  </h4>
                   <p className="text-sm text-neutral-600 mb-3">
-                    You're not fully registered yet. Complete the process to participate in upcoming elections.
+                    {registrationStatus.status === 'rejected'
+                      ? 'Your registration was rejected. Please contact support or re-register with corrected information.'
+                      : registrationStatus.status === 'pending'
+                      ? 'Your registration is being reviewed. You will be notified once verification is complete.'
+                      : 'You\'re not fully registered yet. Complete the process to participate in upcoming elections.'}
                   </p>
-                  <Link href="/voter/register">
-                    <Button size="sm">Complete Registration</Button>
-                  </Link>
+                  {registrationStatus.status !== 'pending' && (
+                    <Link href="/voter/register">
+                      <Button size="sm">
+                        {registrationStatus.status === 'rejected' ? 'Re-register' : 'Complete Registration'}
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </Card>

@@ -121,8 +121,8 @@ export {
   getAuditLogs, 
   getAdminUsers, 
   createAdminUser, 
-  updateAdminUser, 
-  deleteAdminUser 
+  updateAdminUser,
+  updateAdminUserStatus,
 } from './admin';
 
 export type { 
@@ -156,3 +156,15 @@ export type {
   CountyVoter, 
   VoterManagementFilter 
 } from './ro';
+
+// Notification Service
+export { 
+  getNotifications, 
+  getUnreadCount, 
+  markAsRead, 
+  markAllAsRead 
+} from './notification';
+
+export type { 
+  NotificationData 
+} from './notification';

@@ -402,4 +402,5 @@ export default {
   verifyVoteOnChain,
   getLiveResults,
   requestBallot,
+  cancelBallotRequest,
 };

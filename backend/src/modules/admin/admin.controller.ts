@@ -34,13 +34,15 @@ import {
   UpdateElectionDto,
   UpdateElectionStatusDto,
   ElectionQueryDto,
+  AdminCreateCandidateDto,
+  AdminUpdateCandidateDto,
+  UpdateCandidateStatusDto,
+  AdminCandidateQueryDto,
   CreateAdminUserDto,
   UpdateAdminUserDto,
   UpdateAdminStatusDto,
   AssignCountyDto,
   SuspendRoDto,
-  UpdateCandidateStatusDto,
-  AdminCandidateQueryDto,
   VoterQueryDto,
   UpdateVoterStatusDto,
   AuditLogQueryDto,
@@ -638,6 +640,20 @@ export class AdminController {
 
   // ==================== Candidate Management ====================
 
+  @Post('candidates')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new candidate (all positions including president)' })
+  @ApiResponse({ status: 201, description: 'Candidate created' })
+  async createCandidate(
+    @Body() dto: AdminCreateCandidateDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const candidate = await this.adminService.createCandidate(dto, userId);
+    return { success: true, data: candidate };
+  }
+
   @Get('candidates')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('super_admin', 'admin')
@@ -652,6 +668,21 @@ export class AdminController {
   ): Promise<{ success: boolean; data: any }> {
     const result = await this.adminService.findAllCandidates(query);
     return { success: true, data: result };
+  }
+
+  @Put('candidates/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update candidate details (rename, party, etc.)' })
+  @ApiResponse({ status: 200, description: 'Candidate updated' })
+  async updateCandidate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AdminUpdateCandidateDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const candidate = await this.adminService.updateCandidate(id, dto, userId);
+    return { success: true, data: candidate };
   }
 
   @Patch('candidates/:id/status')

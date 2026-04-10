@@ -559,6 +559,132 @@ export class SuspendRoDto {
 
 // ==================== Candidate Admin DTOs ====================
 
+export class AdminCreateCandidateDto {
+  @ApiProperty({ example: 'John' })
+  @IsString()
+  @IsNotEmpty()
+  firstName: string;
+
+  @ApiProperty({ example: 'Doe' })
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
+
+  @ApiPropertyOptional({ example: 'Kamau' })
+  @IsOptional()
+  @IsString()
+  middleName?: string;
+
+  @ApiProperty({
+    example: 'governor',
+    enum: ['president', 'governor', 'senator', 'mp', 'mca'],
+  })
+  @IsEnum(['president', 'governor', 'senator', 'mp', 'mca'])
+  position: string;
+
+  @ApiPropertyOptional({ example: 'Nairobi' })
+  @IsOptional()
+  @IsString()
+  countyName?: string;
+
+  @ApiPropertyOptional({ example: 'county-uuid' })
+  @IsOptional()
+  @IsString()
+  countyId?: string;
+
+  @ApiPropertyOptional({ example: 'constituency-uuid' })
+  @IsOptional()
+  @IsString()
+  constituencyId?: string;
+
+  @ApiPropertyOptional({ example: 'ward-uuid' })
+  @IsOptional()
+  @IsString()
+  wardId?: string;
+
+  @ApiPropertyOptional({ example: 'ODM' })
+  @IsOptional()
+  @IsString()
+  partyName?: string;
+
+  @ApiPropertyOptional({ example: 'ODM' })
+  @IsOptional()
+  @IsString()
+  partyAbbreviation?: string;
+
+  @ApiPropertyOptional({ example: '#FF6B00' })
+  @IsOptional()
+  @IsString()
+  partyColor?: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  isIndependent?: boolean;
+
+  @ApiPropertyOptional({ example: '1980-01-15' })
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/photo.jpg' })
+  @IsOptional()
+  @IsString()
+  photo?: string;
+
+  @ApiPropertyOptional({ example: 'My manifesto text...' })
+  @IsOptional()
+  @IsString()
+  manifesto?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  electionId?: string;
+}
+
+export class AdminUpdateCandidateDto {
+  @ApiPropertyOptional({ example: 'John' })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: 'Doe' })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @ApiPropertyOptional({ example: 'Kamau' })
+  @IsOptional()
+  @IsString()
+  middleName?: string;
+
+  @ApiPropertyOptional({ example: 'ODM' })
+  @IsOptional()
+  @IsString()
+  partyName?: string;
+
+  @ApiPropertyOptional({ example: 'ODM' })
+  @IsOptional()
+  @IsString()
+  partyAbbreviation?: string;
+
+  @ApiPropertyOptional({ example: '#FF6B00' })
+  @IsOptional()
+  @IsString()
+  partyColor?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/photo.jpg' })
+  @IsOptional()
+  @IsString()
+  photo?: string;
+
+  @ApiPropertyOptional({ example: 'Updated manifesto...' })
+  @IsOptional()
+  @IsString()
+  manifesto?: string;
+}
+
 export class UpdateCandidateStatusDto {
   @ApiProperty({ enum: ['approved', 'rejected', 'pending'] })
   @IsEnum(['approved', 'rejected', 'pending'])
@@ -585,6 +711,11 @@ export class AdminCandidateQueryDto {
   @IsOptional()
   @IsString()
   electionId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  countyId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

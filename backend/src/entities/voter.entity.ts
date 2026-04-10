@@ -75,6 +75,9 @@ export class Voter {
   @Column({ default: 'pending' })
   status: string;
 
+  @Column({ name: 'registration_status', default: 'pending' })
+  registrationStatus: string;
+
   @Column({ name: 'national_id_verified', default: false })
   nationalIdVerified: boolean;
 

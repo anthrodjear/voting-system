@@ -17,6 +17,7 @@ import { Vote } from '../../entities/vote.entity';
 import { Election } from '../../entities/election.entity';
 import { SuperAdmin } from '../../entities/super-admin.entity';
 import { VoteTracking } from '../../entities/vote-tracking.entity';
+import { NotificationService } from '../notification/notification.service';
 import {
   CreateCountyDto,
   UpdateCountyDto,
@@ -42,6 +43,8 @@ import {
   SuspendRoDto,
   UpdateCandidateStatusDto,
   AdminCandidateQueryDto,
+  AdminCreateCandidateDto,
+  AdminUpdateCandidateDto,
   VoterQueryDto,
   UpdateVoterStatusDto,
   AuditLogQueryDto,
@@ -81,6 +84,7 @@ export class AdminService {
     private superAdminRepository: Repository<SuperAdmin>,
     @InjectRepository(VoteTracking)
     private voteTrackingRepository: Repository<VoteTracking>,
+    private notificationService: NotificationService,
   ) {}
 
   // ==================== County Management ====================
@@ -1351,8 +1355,82 @@ export class AdminService {
 
   // ==================== Candidate Management ====================
 
+  async createCandidate(dto: AdminCreateCandidateDto, userId: string): Promise<any> {
+    const candidateNumber = `${dto.position.toUpperCase().slice(0, 3)}${Math.floor(Math.random() * 9000) + 1000}`;
+
+    const candidate = await this.candidateRepository.save({
+      candidateNumber,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      middleName: dto.middleName,
+      position: dto.position,
+      countyId: dto.countyId,
+      countyName: dto.countyName,
+      constituencyId: dto.constituencyId,
+      wardId: dto.wardId,
+      partyName: dto.partyName,
+      partyAbbreviation: dto.partyAbbreviation?.toUpperCase(),
+      partyColor: dto.partyColor,
+      isIndependent: dto.isIndependent ?? false,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+      photo: dto.photo,
+      manifesto: dto.manifesto,
+      status: 'pending',
+      electionId: dto.electionId,
+    } as Candidate);
+
+    await this.auditLogRepository.save({
+      userId,
+      userRole: 'admin',
+      action: 'candidate_created',
+      resource: 'candidate',
+      resourceId: candidate.id,
+      newValue: { position: dto.position, firstName: dto.firstName, lastName: dto.lastName },
+    });
+
+    return {
+      id: candidate.id,
+      candidateNumber: candidate.candidateNumber,
+      status: 'pending',
+    };
+  }
+
+  async updateCandidate(id: string, dto: AdminUpdateCandidateDto, userId: string): Promise<any> {
+    const candidate = await this.candidateRepository.findOne({ where: { id } });
+
+    if (!candidate) {
+      throw new NotFoundException('Candidate not found');
+    }
+
+    const oldValue = { ...candidate };
+    const updateData: any = {};
+
+    if (dto.firstName) updateData.firstName = dto.firstName;
+    if (dto.lastName) updateData.lastName = dto.lastName;
+    if (dto.middleName !== undefined) updateData.middleName = dto.middleName;
+    if (dto.partyName) updateData.partyName = dto.partyName;
+    if (dto.partyAbbreviation) updateData.partyAbbreviation = dto.partyAbbreviation.toUpperCase();
+    if (dto.partyColor !== undefined) updateData.partyColor = dto.partyColor;
+    if (dto.photo !== undefined) updateData.photo = dto.photo;
+    if (dto.manifesto !== undefined) updateData.manifesto = dto.manifesto;
+
+    await this.candidateRepository.update(id, updateData);
+
+    await this.auditLogRepository.save({
+      userId,
+      userRole: 'admin',
+      action: 'candidate_updated',
+      resource: 'candidate',
+      resourceId: id,
+      oldValue,
+      newValue: updateData,
+    });
+
+    return this.candidateRepository.findOne({ where: { id } });
+  }
+
   async findAllCandidates(query: AdminCandidateQueryDto): Promise<{ candidates: any[]; pagination: any }> {
-    const { position, status, electionId, search, page = 1, limit = 20 } = query;
+    const { position, status, electionId, countyId, search, page = 1, limit = 20 } = query;
 
     const queryBuilder = this.candidateRepository.createQueryBuilder('candidate');
 
@@ -1366,6 +1444,10 @@ export class AdminService {
 
     if (electionId) {
       queryBuilder.andWhere('candidate.electionId = :electionId', { electionId });
+    }
+
+    if (countyId) {
+      queryBuilder.andWhere('candidate.countyId = :countyId', { countyId });
     }
 
     if (search) {
@@ -1388,11 +1470,17 @@ export class AdminService {
         candidateNumber: c.candidateNumber,
         firstName: c.firstName,
         lastName: c.lastName,
+        middleName: c.middleName,
         position: c.position,
+        countyId: c.countyId,
         countyName: c.countyName,
+        constituencyId: c.constituencyId,
+        wardId: c.wardId,
         partyName: c.partyName,
         partyAbbreviation: c.partyAbbreviation,
+        partyColor: c.partyColor,
         isIndependent: c.isIndependent,
+        dateOfBirth: c.dateOfBirth,
         photo: c.photo,
         manifesto: c.manifesto,
         status: c.status,
@@ -1431,6 +1519,32 @@ export class AdminService {
       oldValue: { status: oldStatus },
       newValue: { status: dto.status, rejectionReason: dto.rejectionReason },
     });
+
+    // Notify the RO who submitted this candidate
+    const candidateName = `${candidate.firstName} ${candidate.lastName}`;
+    if (dto.status === 'approved') {
+      await this.notificationService.createForRole({
+        userRole: 'ro',
+        type: 'success',
+        title: 'Candidate Approved',
+        message: `${candidateName} has been approved for ${candidate.position}.`,
+        actionUrl: '/ro/candidates',
+        icon: 'check',
+        relatedResource: 'candidate',
+        relatedResourceId: id,
+      });
+    } else if (dto.status === 'rejected') {
+      await this.notificationService.createForRole({
+        userRole: 'ro',
+        type: 'error',
+        title: 'Candidate Rejected',
+        message: `${candidateName} has been rejected for ${candidate.position}${dto.rejectionReason ? `: ${dto.rejectionReason}` : '.'}`,
+        actionUrl: '/ro/candidates',
+        icon: 'alert',
+        relatedResource: 'candidate',
+        relatedResourceId: id,
+      });
+    }
 
     return { id, status: dto.status };
   }
@@ -1744,19 +1858,5 @@ export class AdminService {
 
   async clearAuditLogs(): Promise<void> {
     await this.auditLogRepository.createQueryBuilder().delete().execute();
-  }
-
-  // ==================== Geographic Changes (Stubs) ====================
-
-  async getPendingGeographicChanges(_countyId?: string): Promise<any[]> {
-    return [];
-  }
-
-  async reviewGeographicChange(_id: string, _dto: any, _userId: string): Promise<any> {
-    return { success: true, message: 'Not implemented' };
-  }
-
-  async getMyProposals(_userId: string): Promise<any[]> {
-    return [];
   }
 }

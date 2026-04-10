@@ -5,8 +5,8 @@ FROM node:20-alpine AS base
 
 WORKDIR /app
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++ git
+# Install dependencies for native modules and networking tools
+RUN apk add --no-cache python3 make g++ git netcat-openbsd
 
 # Copy package files
 COPY package*.json ./
@@ -19,17 +19,24 @@ RUN npm ci --legacy-peer-deps
 # =============================================================================
 FROM base AS development
 
+# Install networking tools for health checks and waiting
+RUN apk add --no-cache netcat-openbsd
+
 # Copy source code
 COPY . .
+
+# Set permissions for entrypoint script
+RUN chmod +x docker-entrypoint.sh 2>/dev/null || true
 
 # Expose the application port
 EXPOSE 3001
 
 # Health check for development
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/v1/health/live || exit 1
 
-# Start the application in development mode with watch
+# Use entrypoint script for development
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["npm", "run", "start:dev"]
 
 # =============================================================================
@@ -89,7 +96,7 @@ USER nodejs
 
 # Health check configuration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/v1/health/live || exit 1
 
 # Start the application
 CMD ["node", "dist/main.js"]

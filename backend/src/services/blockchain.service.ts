@@ -230,15 +230,15 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
     { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "bytes32", "name": "voterHash", "type": "bytes32" }, { "indexed": false, "internalType": "bytes32", "name": "voteHash", "type": "bytes32" }, { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "name": "VoteCast", "type": "event" },
     { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "uint8", "name": "oldState", "type": "uint8" }, { "indexed": false, "internalType": "uint8", "name": "newState", "type": "uint8" }], "name": "StateChanged", "type": "event" },
     { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "bytes32", "name": "encryptedResults", "type": "bytes32" }, { "indexed": false, "internalType": "bytes", "name": "proof", "type": "bytes" }, { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "name": "ResultsPublished", "type": "event" },
-    { "inputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }], "name": "voters", "outputs": [{ "internalType": "bool", "name": "hasVoted", "type": "bool" }, { "internalType": "bytes32", "name": "voteHash", "type": "bytes32" }, { "internalType": "uint256", "name": "timestamp", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+    { "inputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }], "name": "voters", "outputs": [{ "internalType": "bool", "name": "hasVoted", "type": "bool" }, { "internalType": "bytes32", "name": "voteHash", "type": "bytes32" }, { "internalType": "uint256", "name": "timestamp", "type": "uint256" }, { "internalType": "bytes32", "name": "blindingFactor", "type": "bytes32" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "state", "outputs": [{ "internalType": "enum VoteContract.ElectionState", "name": "", "type": "uint8" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "electionStartTime", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "electionEndTime", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "totalVotes", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "admin", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
-    { "inputs": [{ "internalType": "bytes32", "name": "_voterHash", "type": "bytes32" }, { "internalType": "bytes32", "name": "_voteHash", "type": "bytes32" }, { "internalType": "bytes", "name": "_proof", "type": "bytes" }], "name": "castVote", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+    { "inputs": [{ "internalType": "bytes32", "name": "_voterHash", "type": "bytes32" }, { "internalType": "bytes32", "name": "_voteHash", "type": "bytes32" }, { "internalType": "bytes", "name": "_proof", "type": "bytes" }, { "internalType": "bytes32", "name": "_blindingFactor", "type": "bytes32" }], "name": "castVote", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
     { "inputs": [{ "internalType": "bytes32", "name": "_voterHash", "type": "bytes32" }], "name": "hasVoted", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" },
-    { "inputs": [{ "internalType": "bytes32", "name": "_voterHash", "type": "bytes32" }], "name": "getVoteProof", "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }, { "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+    { "inputs": [{ "internalType": "bytes32", "name": "_voterHash", "type": "bytes32" }], "name": "getVoteProof", "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }, { "internalType": "uint256", "name": "", "type": "uint256" }, { "internalType": "bytes32", "name": "blindingFactor", "type": "bytes32" }], "stateMutability": "view", "type": "function" },
     { "inputs": [{ "internalType": "uint8", "name": "_state", "type": "uint8" }], "name": "setElectionState", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
     { "inputs": [{ "internalType": "bytes32", "name": "_encryptedResults", "type": "bytes32" }, { "internalType": "bytes", "name": "_proof", "type": "bytes" }], "name": "publishResults", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
     { "inputs": [{ "internalType": "bytes32", "name": "_candidateId", "type": "bytes32" }, { "internalType": "bytes32", "name": "_encryptedCount", "type": "bytes32" }, { "internalType": "bytes", "name": "_proof", "type": "bytes" }], "name": "verifyResult", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" },
@@ -252,8 +252,8 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
     { "inputs": [], "name": "hePublicKey", "outputs": [{ "internalType": "bytes", "name": "", "type": "bytes" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "zkpVerificationKey", "outputs": [{ "internalType": "bytes", "name": "", "type": "bytes" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "lastKeyRotation", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-    { "inputs": [], "name": "keyRotationInterval", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-    { "inputs": [], "name": "keysSet", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "KEY_ROTATION_INTERVAL", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "keysInitialized", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" },
     { "inputs": [{ "internalType": "bytes", "name": "_hePublicKey", "type": "bytes" }, { "internalType": "bytes", "name": "_zkpVerificationKey", "type": "bytes" }], "name": "setElectionKeys", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
     { "inputs": [], "name": "getHePublicKey", "outputs": [{ "internalType": "bytes", "name": "", "type": "bytes" }], "stateMutability": "view", "type": "function" },
     { "inputs": [], "name": "getKeyInfo", "outputs": [{ "internalType": "bool", "name": "keysSet", "type": "bool" }, { "internalType": "uint256", "name": "lastRotation", "type": "uint256" }, { "internalType": "uint256", "name": "rotationInterval", "type": "uint256" }, { "internalType": "uint256", "name": "holderCount", "type": "uint256" }], "stateMutability": "view", "type": "function" }
@@ -839,6 +839,7 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
 
       const voterHash = this.web3.utils.keccak256(voterId);
       const voteHash = this.web3.utils.keccak256(encryptedVoteHash);
+      const blindingFactor = this.web3.utils.keccak256(this.web3.utils.randomHex(32));
       
       const from = await this.getDefaultAccount();
       const gasPrice = this.config.gasPrice 
@@ -849,7 +850,7 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
 
       // Execute transaction with retry and confirmation
       const result = await this.executeTransactionWithRetry(
-        this.voteContract.methods.castVote(voterHash, voteHash, proof),
+        this.voteContract.methods.castVote(voterHash, voteHash, proof, blindingFactor),
         {
           from,
           gas: this.config.gasLimit || this.defaultGasLimit,
@@ -1122,8 +1123,8 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
       this.keyManagerContract.methods.getHePublicKey().call(),
       this.keyManagerContract.methods.zkpVerificationKey().call(),
       this.keyManagerContract.methods.lastKeyRotation().call(),
-      this.keyManagerContract.methods.keyRotationInterval().call(),
-      this.keyManagerContract.methods.keysSet().call(),
+      this.keyManagerContract.methods.KEY_ROTATION_INTERVAL().call(),
+      this.keyManagerContract.methods.keysInitialized().call(),
     ]);
 
     if (!keysSet) {
@@ -1147,7 +1148,7 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
     }
 
     const voterHash = this.web3.utils.keccak256(voterId);
-    const [voteHash, timestamp] = await this.voteContract.methods
+    const [voteHash, timestamp, blindingFactor] = await this.voteContract.methods
       .getVoteProof(voterHash)
       .call();
 

@@ -6,13 +6,15 @@ import React, { useState } from 'react';
 // Types
 // ============================================
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> {
   label?: string;
   error?: string;
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   showPasswordToggle?: boolean;
+  as?: 'input' | 'select' | 'textarea';
+  children?: React.ReactNode;
 }
 
 export interface InputRef extends HTMLInputElement {}
@@ -21,7 +23,7 @@ export interface InputRef extends HTMLInputElement {}
 // Component
 // ============================================
 
-export const Input = React.forwardRef<InputRef, InputProps>(
+export const Input = React.forwardRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, InputProps>(
   (
     {
       label,
@@ -34,6 +36,8 @@ export const Input = React.forwardRef<InputRef, InputProps>(
       className = '',
       id,
       disabled,
+      as = 'input',
+      children,
       ...props
     },
     ref
@@ -51,6 +55,136 @@ export const Input = React.forwardRef<InputRef, InputProps>(
       return 'border-neutral-300 focus:ring-primary-500 dark:border-neutral-600';
     };
 
+    // Render select element
+    if (as === 'select') {
+      return (
+        <div className="w-full">
+          {label && (
+            <label
+              htmlFor={inputId}
+              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5"
+            >
+              {label}
+              {props.required && (
+                <span className="text-error ml-0.5" aria-hidden="true">
+                  *
+                </span>
+              )}
+            </label>
+          )}
+
+          <div className="relative">
+            {/* Left Icon */}
+            {leftIcon && (
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500 pointer-events-none z-10">
+                {leftIcon}
+              </div>
+            )}
+
+            {/* Select */}
+            <select
+              ref={ref as React.Ref<HTMLSelectElement>}
+              id={inputId}
+              disabled={disabled}
+              aria-invalid={!!error}
+              aria-describedby={error ? errorId : helperText ? helperId : undefined}
+              className={`
+                block w-full rounded-lg bg-white dark:bg-neutral-800
+                px-4 py-2.5 text-neutral-900 dark:text-neutral-100
+                placeholder:text-neutral-400 dark:placeholder:text-neutral-500
+                transition-all duration-200 appearance-none
+                focus:outline-none focus:ring-2 focus:ring-offset-0
+                disabled:cursor-not-allowed disabled:opacity-50
+                ${getBorderColor()}
+                ${leftIcon ? 'pl-10' : ''}
+                pr-10
+                ${className}
+              `}
+              {...(props as React.SelectHTMLAttributes<HTMLSelectElement>)}
+            >
+              {children}
+            </select>
+
+            {/* Chevron icon for select */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <p id={errorId} className="mt-1.5 text-sm text-error dark:text-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          {/* Helper Text */}
+          {helperText && !error && (
+            <p id={helperId} className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+              {helperText}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // Render textarea element
+    if (as === 'textarea') {
+      return (
+        <div className="w-full">
+          {label && (
+            <label
+              htmlFor={inputId}
+              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5"
+            >
+              {label}
+              {props.required && (
+                <span className="text-error ml-0.5" aria-hidden="true">
+                  *
+                </span>
+              )}
+            </label>
+          )}
+
+          <textarea
+            ref={ref as React.Ref<HTMLTextAreaElement>}
+            id={inputId}
+            disabled={disabled}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={`
+              block w-full rounded-lg bg-white dark:bg-neutral-800
+              px-4 py-2.5 text-neutral-900 dark:text-neutral-100
+              placeholder:text-neutral-400 dark:placeholder:text-neutral-500
+              transition-all duration-200
+              focus:outline-none focus:ring-2 focus:ring-offset-0
+              disabled:cursor-not-allowed disabled:opacity-50
+              ${getBorderColor()}
+              ${className}
+            `}
+            {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+          />
+
+          {/* Error Message */}
+          {error && (
+            <p id={errorId} className="mt-1.5 text-sm text-error dark:text-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          {/* Helper Text */}
+          {helperText && !error && (
+            <p id={helperId} className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+              {helperText}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // Render input element (default)
     return (
       <div className="w-full">
         {label && (
@@ -77,7 +211,7 @@ export const Input = React.forwardRef<InputRef, InputProps>(
 
           {/* Input */}
           <input
-            ref={ref}
+            ref={ref as React.Ref<HTMLInputElement>}
             id={inputId}
             type={inputType}
             disabled={disabled}
@@ -92,11 +226,11 @@ export const Input = React.forwardRef<InputRef, InputProps>(
               disabled:cursor-not-allowed disabled:opacity-50
               ${getBorderColor()}
               ${leftIcon ? 'pl-10' : ''}
-              ${rightIcon || isPassword || (showPasswordToggle && isPassword) ? 'pr-10' : ''}
+              ${rightIcon || (showPasswordToggle && isPassword) ? 'pr-10' : ''}
               ${error ? 'focus:border-error' : ''}
               ${className}
             `}
-            {...props}
+            {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
           />
 
           {/* Right Icon / Password Toggle */}

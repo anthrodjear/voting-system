@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { 
+import {
   UserIcon,
   DocumentTextIcon,
   FingerPrintIcon,
@@ -14,9 +14,10 @@ import {
   ArrowLeftIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
-import { Button, Input, Card, StepIndicator, Alert } from '@/components/ui';
+import { Button, Input, Card, StepIndicator, Alert, Select } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { checkIdAvailability, lookupNiif, register as registerVoter, enrollBiometrics } from '@/services';
+import { checkIdAvailability, lookupNiif, register as registerVoter } from '@/services';
+import { geographicService } from '@/services/geographic';
 
 const steps = [
   { label: 'National ID', icon: DocumentTextIcon },
@@ -64,6 +65,7 @@ export default function VoterRegistrationPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [idVerified, setIdVerified] = useState(false);
   const [biometricsCaptured, setBiometricsCaptured] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Forms for each step
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
@@ -81,90 +83,188 @@ export default function VoterRegistrationPage() {
     resolver: zodResolver(step3Schema),
   });
 
-   const handleStep1Submit = async (data: Step1Data) => {
-     setIsLoading(true);
-     try {
-       // Check if ID is available
-       const isAvailable = await checkIdAvailability(data.nationalId);
-       if (isAvailable) {
-         // Lookup NIIF data (placeholder function)
-         const niifData = await lookupNiif(data.nationalId);
-         setStep1Data(data);
-         setIdVerified(true);
-         setCurrentStep(1);
-       } else {
-         throw new Error('National ID is already registered');
-       }
-     } catch (error: any) {
-       throw new Error(error.message || 'ID verification failed');
-     } finally {
-       setIsLoading(false);
-     }
-   };
+  // Geographic data state
+  const [counties, setCounties] = useState<{ value: string; label: string }[]>([]);
+  const [constituencies, setConstituencies] = useState<{ value: string; label: string }[]>([]);
+  const [wards, setWards] = useState<{ value: string; label: string }[]>([]);
+  const [isLoadingGeographic, setIsLoadingGeographic] = useState(false);
+  const [selectedCounty, setSelectedCounty] = useState('');
+  const [selectedConstituency, setSelectedConstituency] = useState('');
+  const [selectedWard, setSelectedWard] = useState('');
+
+  // Load counties on mount
+  useEffect(() => {
+    const loadCounties = async () => {
+      setIsLoadingGeographic(true);
+      try {
+        const countiesData = await geographicService.getCounties();
+        const countyOptions = countiesData.map(c => ({ value: c.id, label: c.name }));
+        setCounties(countyOptions);
+      } catch (err) {
+        console.error('Failed to load counties:', err);
+      } finally {
+        setIsLoadingGeographic(false);
+      }
+    };
+    loadCounties();
+  }, []);
+
+  // Load constituencies when county changes
+  useEffect(() => {
+    const loadConstituencies = async () => {
+      if (!selectedCounty) {
+        setConstituencies([]);
+        return;
+      }
+      setIsLoadingGeographic(true);
+      try {
+        const data = await geographicService.getConstituenciesByCounty(selectedCounty);
+        const options = data.map(c => ({ value: c.id, label: c.name }));
+        setConstituencies(options);
+      } catch (err) {
+        console.error('Failed to load constituencies:', err);
+      } finally {
+        setIsLoadingGeographic(false);
+      }
+    };
+    loadConstituencies();
+  }, [selectedCounty]);
+
+  // Load wards when constituency changes
+  useEffect(() => {
+    const loadWards = async () => {
+      if (!selectedConstituency) {
+        setWards([]);
+        return;
+      }
+      setIsLoadingGeographic(true);
+      try {
+        const data = await geographicService.getWardsByConstituency(selectedConstituency);
+        const options = data.map(w => ({ value: w.id, label: w.name }));
+        setWards(options);
+      } catch (err) {
+        console.error('Failed to load wards:', err);
+      } finally {
+        setIsLoadingGeographic(false);
+      }
+    };
+    loadWards();
+  }, [selectedConstituency]);
+
+  const handleStep1Submit = async (data: Step1Data) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const isAvailable = await checkIdAvailability(data.nationalId);
+      if (isAvailable) {
+        setStep1Data(data);
+        setIdVerified(true);
+        setCurrentStep(1);
+      } else {
+        setError('National ID is already registered');
+      }
+    } catch (error: any) {
+      setError(error.message || 'ID verification failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleStep2Submit = async (data: Step2Data) => {
     setStep2Data(data);
     setCurrentStep(2);
   };
 
-   const handleStep3Submit = async (data: Step3Data) => {
-     setIsLoading(true);
-     try {
-       // Combine all step data for final registration
-       const voterData = {
-         nationalId: step1Data?.nationalId || '',
-         firstName: step2Data?.firstName || '',
-         lastName: step2Data?.lastName || '',
-         dateOfBirth: step2Data?.dateOfBirth || '',
-         county: step2Data?.county || '',
-         constituency: step2Data?.constituency || '',
-         ward: step2Data?.ward || '',
-         phoneNumber: step2Data?.phone || '',
-         email: step2Data?.email || '',
-         // Mock biometric data for now (in real implementation, this would come from actual biometric capture)
-         faceTemplate: 'mock_face_template_data',
-         fingerprints: [
-           { finger: 'left_thumb', template: 'mock_left_thumb_template', quality: 85 },
-           { finger: 'right_thumb', template: 'mock_right_thumb_template', quality: 90 }
-         ],
-         password: data.password,
-         securityQuestions: [
-           { questionId: 'q1', answer: data.securityAnswer1 }
-         ]
-       };
-       
-       // Call the actual voter registration service
-       await registerVoter(voterData);
-       
-       // Update steps to show completion
-       setCurrentStep(3);
-     } catch (error: any) {
-       throw new Error(error.message || 'Registration failed');
-     } finally {
-       setIsLoading(false);
-     }
-   };
+  const handleStep3Submit = async (data: Step3Data) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // NOTE: Biometric enrollment is handled as a separate step (Step 4)
+      // Registration payload does NOT include faceTemplate or fingerprints
+      const voterData = {
+        nationalId: step1Data?.nationalId || '',
+        firstName: step2Data?.firstName || '',
+        lastName: step2Data?.lastName || '',
+        dateOfBirth: step2Data?.dateOfBirth || '',
+        county: step2Data?.county || '',
+        constituency: step2Data?.constituency || '',
+        ward: step2Data?.ward || '',
+        phoneNumber: step2Data?.phone || '',
+        email: step2Data?.email || '',
+        password: data.password,
+        securityQuestions: [
+          { questionId: 'q1', answer: data.securityAnswer1 }
+        ]
+      };
+      
+      await registerVoter(voterData);
+      setCurrentStep(3);
+    } catch (error: any) {
+      setError(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-   const handleBiometricCapture = async () => {
-     setIsLoading(true);
-     try {
-       // Mock biometric capture data (in real implementation, this would come from device cameras/sensors)
-       const faceTemplate = 'mock_face_template_from_camera';
-       const fingerprints = [
-         { finger: 'left_thumb', template: 'mock_left_thumb_from_scanner', quality: 88 },
-         { finger: 'right_thumb', template: 'mock_right_thumb_from_scanner', quality: 92 }
-       ];
-       
-       // Call the actual biometric enrollment service
-       await enrollBiometrics(faceTemplate, fingerprints);
-       
-       setBiometricsCaptured(true);
-     } catch (error: any) {
-       throw new Error(error.message || 'Biometric capture failed');
-     } finally {
-       setIsLoading(false);
-     }
-   };
+  const handleBiometricCapture = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Use the actual biometrics service with graceful degradation
+      const { initializeCamera, captureFaceWithLiveness, stopCamera, captureFingerprint, enrollBiometric } = await import('@/services/biometrics');
+      
+      let faceTemplate: string | null = null;
+      let fingerprintTemplate: string | null = null;
+      
+      // Attempt face capture with liveness detection
+      try {
+        const stream = await initializeCamera();
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.playsInline = true;
+        await video.play();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const faceResult = await captureFaceWithLiveness(video);
+        faceTemplate = faceResult.template;
+        stopCamera();
+      } catch (faceError: any) {
+        console.warn('Face capture not available:', faceError.message);
+      }
+      
+      // Attempt fingerprint capture (requires hardware)
+      try {
+        const fingerprintResult = await captureFingerprint();
+        fingerprintTemplate = fingerprintResult.template;
+      } catch (fpError: any) {
+        console.warn('Fingerprint capture not available:', fpError.message);
+      }
+      
+      // Enroll whatever biometrics we captured
+      if (faceTemplate) {
+        await enrollBiometric('face', faceTemplate);
+      }
+      if (fingerprintTemplate) {
+        await enrollBiometric('fingerprint', fingerprintTemplate);
+      }
+      
+      if (!faceTemplate && !fingerprintTemplate) {
+        setError(
+          'Biometric capture requires a camera for facial recognition and/or a fingerprint scanner. ' +
+          'Please ensure your device has the necessary hardware and permissions are granted. ' +
+          'You can complete biometric enrollment later from your profile settings.'
+        );
+        return;
+      }
+      
+      setBiometricsCaptured(true);
+    } catch (error: any) {
+      setError(error.message || 'Biometric capture failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -179,6 +279,18 @@ export default function VoterRegistrationPage() {
             {idVerified && (
               <Alert variant="success" title="ID Verified">
                 Your National ID has been verified successfully.
+              </Alert>
+            )}
+
+            {error && (
+              <Alert variant="error" title="Error">
+                {error}
+              </Alert>
+            )}
+
+            {error && (
+              <Alert variant="error" title="Error">
+                {error}
               </Alert>
             )}
 
@@ -269,23 +381,47 @@ export default function VoterRegistrationPage() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-4">
-              <Input
+              <Select
                 label="County"
-                placeholder="Nairobi"
-                {...form2.register('county')}
+                placeholder="Select County"
+                options={counties}
+                value={selectedCounty}
+                onChange={(value) => {
+                  setSelectedCounty(value);
+                  form2.setValue('county', value);
+                  // Reset dependent fields
+                  setSelectedConstituency('');
+                  form2.setValue('constituency', '');
+                  form2.setValue('ward', '');
+                }}
                 error={form2.formState.errors.county?.message}
+                disabled={isLoadingGeographic}
               />
-              <Input
+              <Select
                 label="Constituency"
-                placeholder="Kasarani"
-                {...form2.register('constituency')}
+                placeholder={selectedCounty ? "Select Constituency" : "Select County first"}
+                options={constituencies}
+                value={selectedConstituency}
+                onChange={(value) => {
+                  setSelectedConstituency(value);
+                  form2.setValue('constituency', value);
+                  // Reset ward
+                  form2.setValue('ward', '');
+                }}
                 error={form2.formState.errors.constituency?.message}
+                disabled={!selectedCounty || isLoadingGeographic}
               />
-              <Input
+              <Select
                 label="Ward"
-                placeholder="Mwiki"
-                {...form2.register('ward')}
+                placeholder={selectedConstituency ? "Select Ward" : "Select Constituency first"}
+                options={wards}
+                value={selectedWard}
+                onChange={(value) => {
+                  setSelectedWard(value);
+                  form2.setValue('ward', value);
+                }}
                 error={form2.formState.errors.ward?.message}
+                disabled={!selectedConstituency || isLoadingGeographic}
               />
             </div>
 
@@ -329,9 +465,13 @@ export default function VoterRegistrationPage() {
                 )} />
               </div>
 
-              {biometricsCaptured ? (
+            {biometricsCaptured ? (
                 <Alert variant="success" title="Biometrics Captured">
                   Your fingerprints and facial recognition have been enrolled successfully.
+                </Alert>
+              ) : error ? (
+                <Alert variant="error" title="Biometric Error">
+                  {error}
                 </Alert>
               ) : (
                 <div className="text-center">
@@ -359,15 +499,33 @@ export default function VoterRegistrationPage() {
                 <ArrowLeftIcon className="w-5 h-5 mr-2" />
                 Back
               </Button>
-              <Button
-                fullWidth
-                size="lg"
-                onClick={() => setCurrentStep(3)}
-                disabled={!biometricsCaptured}
-              >
-                Continue to Confirmation
-                <ArrowRightIcon className="w-5 h-5 ml-2" />
-              </Button>
+              {biometricsCaptured ? (
+                <Button
+                  fullWidth
+                  size="lg"
+                  onClick={() => setCurrentStep(3)}
+                >
+                  Continue to Confirmation
+                  <ArrowRightIcon className="w-5 h-5 ml-2" />
+                </Button>
+              ) : (
+                <div className="flex gap-2 flex-1">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCurrentStep(3)}
+                  >
+                    Skip for now
+                  </Button>
+                  <Button
+                    fullWidth
+                    size="lg"
+                    onClick={() => setCurrentStep(3)}
+                  >
+                    Continue to Confirmation
+                    <ArrowRightIcon className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -397,11 +555,15 @@ export default function VoterRegistrationPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">County</span>
-                  <span className="font-medium">{step2Data?.county}</span>
+                  <span className="font-medium">{counties.find(c => c.value === selectedCounty)?.label || step2Data?.county}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Constituency</span>
-                  <span className="font-medium">{step2Data?.constituency}</span>
+                  <span className="font-medium">{constituencies.find(c => c.value === selectedConstituency)?.label || step2Data?.constituency}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Ward</span>
+                  <span className="font-medium">{wards.find(w => w.value === selectedWard)?.label || step2Data?.ward}</span>
                 </div>
               </div>
             </Card>

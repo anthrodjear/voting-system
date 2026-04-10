@@ -101,4 +101,44 @@ export class CandidateController {
       data: result,
     };
   }
+
+  // POST alias for frontend compatibility (frontend calls POST /candidates/:id/approve)
+  @Post(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve or reject a candidate (POST alias)' })
+  @ApiResponse({ status: 200, description: 'Candidate status updated' })
+  async approvePost(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApproveCandidateDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const result = await this.candidateService.approve(id, dto, userId);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  // POST alias for reject (frontend calls POST /candidates/:id/reject)
+  @Post(':id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reject a candidate (POST alias)' })
+  @ApiResponse({ status: 200, description: 'Candidate rejected' })
+  async rejectPost(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApproveCandidateDto,
+    @CurrentUser('id') userId: string,
+  ): Promise<{ success: boolean; data: any }> {
+    const result = await this.candidateService.approve(id, { ...dto, action: 'reject' }, userId);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
 }

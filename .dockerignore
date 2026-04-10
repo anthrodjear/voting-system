@@ -46,8 +46,8 @@ backend/dist
 # Test files
 tests
 
-# Scripts
-scripts
+# Scripts (keep for Docker management)
+# scripts
 
 # Temporary files
 *.tmp

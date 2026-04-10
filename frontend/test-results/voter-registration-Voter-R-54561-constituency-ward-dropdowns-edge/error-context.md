@@ -1,0 +1,130 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - img [ref=e16]
+      - heading "IEBC Voting System" [level=1] [ref=e18]
+      - paragraph [ref=e19]: Secure Blockchain-Powered Elections
+    - generic [ref=e20]:
+      - navigation "Progress steps" [ref=e22]:
+        - generic [ref=e24]:
+          - img [ref=e27]
+          - generic [ref=e29]: Account
+        - generic [ref=e32]:
+          - generic [ref=e34]: "2"
+          - generic [ref=e35]: Verify ID
+        - generic [ref=e38]:
+          - generic [ref=e40]: "3"
+          - generic [ref=e41]: Biometrics
+        - generic [ref=e44]:
+          - generic [ref=e46]: "4"
+          - generic [ref=e47]: Complete
+      - generic [ref=e48]:
+        - heading "Create Your Account" [level=2] [ref=e49]
+        - paragraph [ref=e50]: "Step 1: Set up your login credentials"
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - heading "Account Information" [level=3] [ref=e53]
+          - generic [ref=e54]:
+            - generic [ref=e55]: First Name*
+            - generic [ref=e56]:
+              - img [ref=e58]
+              - textbox "First Name" [ref=e60]:
+                - /placeholder: John
+          - generic [ref=e61]:
+            - generic [ref=e62]: Last Name*
+            - generic [ref=e63]:
+              - img [ref=e65]
+              - textbox "Last Name" [ref=e67]:
+                - /placeholder: Doe
+          - generic [ref=e68]:
+            - generic [ref=e69]: Email Address
+            - generic [ref=e70]:
+              - img [ref=e72]
+              - textbox "Email Address" [ref=e74]:
+                - /placeholder: you@example.com
+            - paragraph [ref=e75]: We'll send verification links to this email
+          - generic [ref=e76]:
+            - generic [ref=e77]: Phone Number*
+            - generic [ref=e78]:
+              - img [ref=e80]
+              - textbox "Phone Number" [ref=e82]:
+                - /placeholder: +254 700 000 000
+            - paragraph [ref=e83]: For SMS notifications and account recovery
+          - generic [ref=e84]:
+            - generic [ref=e85]: Password*
+            - generic [ref=e86]:
+              - img [ref=e88]
+              - textbox "Password" [ref=e90]:
+                - /placeholder: Create a strong password
+            - paragraph [ref=e91]: Min 8 characters with uppercase, lowercase, numbers, and symbols
+          - generic [ref=e92]:
+            - generic [ref=e93]: Confirm Password*
+            - generic [ref=e94]:
+              - img [ref=e96]
+              - textbox "Confirm Password" [ref=e98]:
+                - /placeholder: Confirm your password
+        - generic [ref=e99]:
+          - heading "ID Verification" [level=3] [ref=e100]
+          - generic [ref=e101]:
+            - generic [ref=e102]: National ID*
+            - generic [ref=e103]:
+              - img [ref=e105]
+              - textbox "National ID" [ref=e107]:
+                - /placeholder: "12345678"
+            - paragraph [ref=e108]: Your national identification number
+          - generic [ref=e109]:
+            - generic [ref=e110]: Date of Birth*
+            - generic [ref=e111]:
+              - img [ref=e113]
+              - textbox "Date of Birth" [ref=e115]
+            - paragraph [ref=e116]: Your date of birth
+          - generic [ref=e117]:
+            - generic [ref=e118]: County
+            - generic [ref=e119]:
+              - generic:
+                - img
+              - combobox "County" [ref=e120]:
+                - option "Select County" [selected]
+              - generic:
+                - img
+          - generic [ref=e121]:
+            - generic [ref=e122]: Constituency
+            - generic [ref=e123]:
+              - generic:
+                - img
+              - combobox "Constituency" [disabled] [ref=e124]:
+                - option "Select Constituency" [selected]
+              - generic:
+                - img
+          - generic [ref=e125]:
+            - generic [ref=e126]: Ward
+            - generic [ref=e127]:
+              - generic:
+                - img
+              - combobox "Ward" [disabled] [ref=e128]:
+                - option "Select Ward" [selected]
+              - generic:
+                - img
+        - generic [ref=e129]:
+          - checkbox "I agree to the Terms of Service and Privacy Policy" [ref=e130]
+          - generic [ref=e131]:
+            - text: I agree to the
+            - link "Terms of Service" [ref=e132] [cursor=pointer]:
+              - /url: /terms
+            - text: and
+            - link "Privacy Policy" [ref=e133] [cursor=pointer]:
+              - /url: /privacy
+        - button "Continue to ID Verification" [ref=e134] [cursor=pointer]:
+          - text: Continue to ID Verification
+          - img [ref=e135]
+      - paragraph [ref=e138]:
+        - text: Already have an account?
+        - link "Sign In" [ref=e139] [cursor=pointer]:
+          - /url: /auth/login
+```
