@@ -52,7 +52,7 @@ export const geographicService = {
    * Get constituency name by ID
    */
   async getConstituencyName(constituencyId: string): Promise<string> {
-    const response = await apiClient.get<{ success: boolean; data: { name: string } }>(`/geographic/constituencies/${constituencyId}/name`);
+    const response = await apiClient.get<{ success: boolean; data: { name: string } }>(`/v1/geographic/constituencies/${constituencyId}/name`);
     return response.data.data?.name || '';
   },
 

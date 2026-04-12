@@ -5,7 +5,7 @@ import AppNavigator from './navigation/AppNavigator';
 const App = () => {
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
       <AppNavigator />
     </SafeAreaView>
   );
@@ -14,7 +14,7 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#000000',
   },
 });
 

@@ -11,6 +11,7 @@ import { Candidate } from '../../entities/candidate.entity';
 import { Voter } from '../../entities/voter.entity';
 import { AuditLog } from '../../entities/audit-log.entity';
 import { CastVoteDto } from '../../dto/vote.dto';
+import { BlockchainService } from '../../services/blockchain.service';
 
 @Injectable()
 export class VoteService {
@@ -29,6 +30,7 @@ export class VoteService {
     private voterRepository: Repository<Voter>,
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
+    private readonly blockchainService: BlockchainService,
   ) {}
 
   async getBallot(voterId: string): Promise<any> {
@@ -76,13 +78,13 @@ export class VoteService {
     };
   }
 
-  async castVote(voterId: string, dto: CastVoteDto): Promise<{ confirmationId: string; voteHash: string; timestamp: Date; message: string }> {
+  async castVote(voterId: string, dto: CastVoteDto): Promise<{ confirmationId: string; voteHash: string; timestamp: Date; blockchainTxHash?: string; message: string }> {
     const voter = await this.voterRepository.findOne({ where: { id: voterId } });
     if (!voter) {
       throw new NotFoundException('Voter not found');
     }
 
-    // Check if voter has already voted
+    // Check if voter has already voted locally
     const existingTracking = await this.trackingRepository.findOne({
       where: { voterId },
     });
@@ -100,15 +102,28 @@ export class VoteService {
       throw new BadRequestException('No active election');
     }
 
-    // Generate vote hash
+    // Validate voter eligibility on blockchain before casting
+    const eligibility = await this.blockchainService.validateVoterEligibility(voterId);
+    if (!eligibility.eligible) {
+      throw new ForbiddenException(`Voter is not eligible to vote: ${eligibility.reason}`);
+    }
+
+    // Generate vote hash locally for audit and confirmation
     const voteHash = createHash('sha256')
       .update(dto.encryptedVote + Date.now())
       .digest('hex');
 
+    // Export the vote on-chain and store the resulting transaction data
+    const receipt = await this.blockchainService.recordVoteHash(
+      voterId,
+      dto.encryptedVote,
+      dto.zkProof || '',
+    );
+
     // Generate confirmation number
     const confirmationNumber = this.generateConfirmationNumber();
 
-    // Save vote
+    // Save vote locally after successful blockchain recording
     const vote = await this.voteRepository.save({
       voterId,
       electionId: election.id,
@@ -116,8 +131,11 @@ export class VoteService {
       voteHash,
       zkProof: dto.zkProof,
       batchId: dto.batchId,
+      blockchainTxHash: receipt.transactionHash,
       confirmationNumber,
-      status: 'pending',
+      status: 'confirmed',
+      confirmedAt: new Date(),
+      blockNumber: receipt.blockNumber,
     });
 
     // Update tracking - reuse existing tracking variable
@@ -148,7 +166,7 @@ export class VoteService {
       action: 'vote_cast',
       resource: 'vote',
       resourceId: vote.id,
-      newValue: { electionId: election.id, confirmationNumber },
+      newValue: { electionId: election.id, confirmationNumber, blockchainTxHash: receipt.transactionHash },
     });
 
     this.logger.log(`Vote cast by voter ${voterId}, confirmation: ${confirmationNumber}`);
@@ -157,6 +175,7 @@ export class VoteService {
       confirmationId: confirmationNumber,
       voteHash,
       timestamp: new Date(),
+      blockchainTxHash: receipt.transactionHash,
       message: 'Vote recorded successfully',
     };
   }

@@ -133,13 +133,15 @@ contract VoteContract is AccessControl, ReentrancyGuard, Pausable {
         bytes proof,
         uint256 timestamp
     );
-    
-    /// @notice Emitted when election results are published
-    event ResultsPublished(
-        bytes32 encryptedResults,
-        bytes proof,
-        uint256 timestamp
-    );
+
+    /// @notice Emitted when circuit breaker is triggered
+    event CircuitBreakerTriggered(string reason);
+
+    /// @notice Emitted when emergency pause is activated
+    event EmergencyPauseActivated(address activator);
+
+    /// @notice Emitted when emergency pause is deactivated
+    event EmergencyPauseDeactivated(address activator);
     
     // ============================================
     // Errors
@@ -264,13 +266,15 @@ contract VoteContract is AccessControl, ReentrancyGuard, Pausable {
      */
     function pause() external onlyRole(ADMIN_ROLE) {
         _pause();
+        emit EmergencyPauseActivated(msg.sender);
     }
-    
+
     /**
      * @dev Unpause the contract after emergency
      */
     function unpause() external onlyRole(ADMIN_ROLE) {
         _unpause();
+        emit EmergencyPauseDeactivated(msg.sender);
     }
     
     // ============================================
@@ -403,6 +407,7 @@ contract VoteContract is AccessControl, ReentrancyGuard, Pausable {
         
         if (!isValid) {
             emit ProofVerificationFailed(_voterHash, _voteHash, "Invalid ZK proof");
+            emit CircuitBreakerTriggered("ZK proof verification failed");
             revert InvalidProof();
         }
     }

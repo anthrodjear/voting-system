@@ -68,32 +68,33 @@ const VoterHomeScreen: React.FC<VoterHomeScreenProps> = ({ navigation }) => {
     }
   };
 
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'active': return styles.statusActive;
+      case 'upcoming': return styles.statusUpcoming;
+      default: return styles.statusCompleted;
+    }
+  };
+
   const renderElection = ({ item }: { item: Election }) => (
     <TouchableOpacity
-      style={styles.electionCard}
+      style={styles.electionItem}
       onPress={() => {
         setSelectedElection(item);
         if (item.status === 'active') {
           navigation.navigate('Vote', { election: item });
         }
       }}
+      activeOpacity={0.6}
     >
-      <View style={styles.electionHeader}>
-        <Text style={styles.electionType}>{item.type.toUpperCase()}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
-        </View>
+      <View style={styles.electionInfo}>
+        <Text style={styles.electionType}>{item.type}</Text>
+        <Text style={styles.electionName}>{item.name}</Text>
+        <Text style={styles.electionDate}>{new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
       </View>
-      <Text style={styles.electionName}>{item.name}</Text>
-      <Text style={styles.electionDate}>{new Date(item.date).toLocaleDateString()}</Text>
-      {item.status === 'active' && (
-        <TouchableOpacity
-          style={styles.voteButton}
-          onPress={() => navigation.navigate('Vote', { election: item })}
-        >
-          <Text style={styles.voteButtonText}>Cast Vote</Text>
-        </TouchableOpacity>
-      )}
+      <Text style={getStatusStyle(item.status)}>
+        {item.status === 'active' ? '● Vote' : item.status}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -109,13 +110,14 @@ const VoterHomeScreen: React.FC<VoterHomeScreenProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      <Text style={styles.sectionTitle}>Elections</Text>
       <FlatList
         data={elections}
         renderItem={renderElection}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8e8e93" />
         }
         ListEmptyComponent={
           <Text style={styles.emptyText}>No elections available</Text>
@@ -124,22 +126,22 @@ const VoterHomeScreen: React.FC<VoterHomeScreenProps> = ({ navigation }) => {
 
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navText}>Home</Text>
+          <Text style={[styles.navIcon, styles.navItemActive]}>●</Text>
+          <Text style={[styles.navText, styles.navItemActive]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('Biometrics')}
         >
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navText}>Biometrics</Text>
+          <Text style={styles.navIcon}>○</Text>
+          <Text style={[styles.navText, styles.navItemInactive]}>Verify</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('VoterProfile')}
         >
-          <Text style={styles.navIcon}>⚙️</Text>
-          <Text style={styles.navText}>Profile</Text>
+          <Text style={styles.navIcon}>○</Text>
+          <Text style={[styles.navText, styles.navItemInactive]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -149,110 +151,124 @@ const VoterHomeScreen: React.FC<VoterHomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000000',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#c0392b',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: '#000000',
   },
   welcomeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    color: '#8e8e93',
+    fontWeight: '500',
+    letterSpacing: -0.3,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: -0.5,
   },
   logoutText: {
-    fontSize: 14,
-    color: '#fff',
+    fontSize: 15,
+    color: '#ff453a',
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 13,
     fontWeight: '600',
+    color: '#8e8e93',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   list: {
-    padding: 16,
+    paddingBottom: 100,
   },
-  electionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  electionHeader: {
+  electionItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#38383a',
+  },
+  electionInfo: {
+    flex: 1,
   },
   electionType: {
     fontSize: 12,
-    color: '#666',
+    color: '#8e8e93',
     fontWeight: '600',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 10,
-    color: '#fff',
-    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   electionName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: -0.3,
+    marginBottom: 2,
   },
   electionDate: {
     fontSize: 14,
-    color: '#666',
+    color: '#8e8e93',
   },
-  voteButton: {
-    backgroundColor: '#c0392b',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 12,
+  statusActive: {
+    fontSize: 12,
+    color: '#30d158',
+    fontWeight: '600',
   },
-  voteButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+  statusUpcoming: {
+    fontSize: 12,
+    color: '#0a84ff',
+    fontWeight: '600',
+  },
+  statusCompleted: {
+    fontSize: 12,
+    color: '#8e8e93',
+    fontWeight: '600',
   },
   emptyText: {
     textAlign: 'center',
-    color: '#666',
-    marginTop: 40,
+    color: '#8e8e93',
+    marginTop: 60,
+    fontSize: 15,
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingVertical: 8,
+    backgroundColor: '#1c1c1e',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#38383a',
+    paddingBottom: 34,
+    paddingTop: 12,
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 4,
+  },
+  navItemActive: {
+    color: '#ff453a',
+  },
+  navItemInactive: {
+    color: '#8e8e93',
   },
   navIcon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   navText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 10,
     marginTop: 4,
+    fontWeight: '500',
   },
 });
 

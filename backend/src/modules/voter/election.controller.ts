@@ -4,7 +4,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 
 import { Election } from '../../entities/election.entity';
+import { Voter } from '../../entities/voter.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('elections')
 @Controller('elections')
@@ -12,7 +14,47 @@ export class ElectionController {
   constructor(
     @InjectRepository(Election)
     private electionRepository: Repository<Election>,
+    @InjectRepository(Voter)
+    private voterRepository: Repository<Voter>,
   ) {}
+
+  @Get('my-elections')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get upcoming elections available to the current voter' })
+  @ApiResponse({ status: 200, description: 'List of upcoming elections for the voter' })
+  async getMyElections(
+    @CurrentUser('id') voterId: string,
+  ): Promise<{ success: boolean; data: Election[] }> {
+    // Get the voter's county
+    const voter = await this.voterRepository.findOne({
+      where: { id: voterId },
+      select: ['countyId'],
+    });
+
+    if (!voter) {
+      throw new NotFoundException('Voter not found');
+    }
+
+    const now = new Date();
+    
+    // Get elections that are upcoming and either:
+    // 1. Have no counties specified (national elections), or
+    // 2. Include the voter's county
+    const elections = await this.electionRepository
+      .createQueryBuilder('election')
+      .where('election.election_date >= :now', { now })
+      .andWhere('election.status = :status', { status: 'active' })
+      .andWhere('(election.counties IS NULL OR array_length(election.counties, 1) = 0 OR :countyId = ANY(election.counties))', { countyId: voter.countyId })
+      .orderBy('election.election_date', 'ASC')
+      .take(10)
+      .getMany();
+
+    return {
+      success: true,
+      data: elections,
+    };
+  }
 
   @Get('upcoming')
   @ApiOperation({ summary: 'Get upcoming elections' })

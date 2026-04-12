@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  besu-node:
+    image: hyperledger/besu:23.10.2
+    container_name: besu-node
+    restart: unless-stopped
+    ports:
+      - "8545:8545"
+      - "8546:8546"
+      - "30303:30303"
+    environment:
+      - BESU_API_ENABLED=true
+      - BESU_API_HOST_ALLOWLIST=*
+      - BESU_API_CORS_ALLOWLIST=*
+      - BESU_LOGGING=INFO
+      - BESU_NETWORK=DEV
+      - BESU_SYNC_MODEFAST=true
+      - BESU_GENESIS_FILE=/genesis/genesis.json
+      - BESU_DATA_PATH=/besu/data
+    volumes:
+      - ./besu-data:/besu/data
+      - ./genesis.json:/genesis/genesis.json:ro
+    networks:
+      - besu-network
+
+networks:
+  besu-network:
+    driver: bridge

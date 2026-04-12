@@ -11,9 +11,10 @@ import {
   EyeSlashIcon,
   EnvelopeIcon,
   LockClosedIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
-import { Button, Input, Card } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
 import { login } from '@/services/auth';
 
@@ -83,16 +84,16 @@ export default function LoginPage() {
   };
 
   return (
-    <Card padding="lg" className="shadow-xl dark:shadow-none dark:bg-neutral-800 dark:border-neutral-700">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Welcome Back</h2>
-        <p className="text-neutral-500 dark:text-neutral-400">Sign in to access your voting dashboard</p>
+    <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-2xl shadow-black/20">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
+        <p className="text-white/50 text-sm">Sign in to access your voting dashboard</p>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-error-light dark:bg-error-900/20 border-l-4 border-error rounded-r-lg">
-          <div className="flex items-center gap-2 text-error-dark dark:text-error-300">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+          <div className="flex items-center gap-3 text-red-400">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
             <span className="text-sm font-medium">{error}</span>
@@ -101,124 +102,134 @@ export default function LoginPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Input
-          label="Email Address"
-          type="email"
-          placeholder="you@example.com"
-          leftIcon={<EnvelopeIcon className="w-5 h-5" />}
-          error={errors.identifier?.message}
-          autoComplete="email"
-          {...register('identifier')}
-        />
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-white/80">Email Address</label>
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30">
+              <EnvelopeIcon className="w-5 h-5" />
+            </div>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              className="w-full pl-12 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+              {...register('identifier')}
+            />
+          </div>
+          {errors.identifier && (
+            <p className="text-red-400 text-xs mt-1">{errors.identifier.message}</p>
+          )}
+        </div>
 
-         <div className="relative">
-           <Input
-             label="Password"
-             type={showPassword ? 'text' : 'password'}
-             placeholder="Enter your password"
-             leftIcon={<LockClosedIcon className="w-5 h-5" />}
-             error={errors.password?.message}
-             {...register('password')}
-              autoComplete="current-password"
-           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-[38px] text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300"
-          >
-            {showPassword ? (
-              <EyeSlashIcon className="w-5 h-5" />
-            ) : (
-              <EyeIcon className="w-5 h-5" />
-            )}
-          </button>
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-white/80">Password</label>
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30">
+              <LockClosedIcon className="w-5 h-5" />
+            </div>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
+              className="w-full pl-12 pr-14 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+              {...register('password')}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/50 transition-colors"
+            >
+              {showPassword ? (
+                <EyeSlashIcon className="w-5 h-5" />
+              ) : (
+                <EyeIcon className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              className="w-4 h-4 text-primary-500 border-neutral-300 dark:border-neutral-600 rounded focus:ring-primary-500 dark:bg-neutral-700"
+              className="w-4 h-4 bg-white/5 border-white/20 rounded focus:ring-emerald-500/20 focus:ring-offset-0 text-emerald-500"
               {...register('rememberMe')}
             />
-            <span className="text-sm text-neutral-600 dark:text-neutral-400">Remember me</span>
+            <span className="text-sm text-white/50">Remember me</span>
           </label>
           <Link 
             href="/auth/forgot-password" 
-            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+            className="text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
           >
             Forgot password?
           </Link>
         </div>
 
-        <Button
+        <button
           type="submit"
-          fullWidth
-          size="lg"
-          loading={isLoading}
-          className="mt-6"
+          disabled={isLoading}
+          className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
         >
-          Sign In
-          <ArrowRightIcon className="w-5 h-5 ml-2" />
-        </Button>
+          {isLoading ? (
+            <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          ) : (
+            <>
+              Sign In
+              <ArrowRightIcon className="w-5 h-5" />
+            </>
+          )}
+        </button>
       </form>
 
-      <div className="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-700 text-center">
-        <p className="text-neutral-600 dark:text-neutral-400">
+      <div className="mt-8 pt-6 border-t border-white/10 text-center">
+        <p className="text-white/50">
           Don't have an account?{' '}
           <Link 
             href="/auth/register" 
-            className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold"
+            className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
           >
             Register to Vote
           </Link>
         </p>
       </div>
 
-      {/* Demo Accounts - Only visible in development mode */}
+      {/* Demo Accounts */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg">
-          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">Demo Accounts (click to auto-fill):</p>
+        <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
+          <p className="text-xs font-medium text-white/40 mb-3">Demo Accounts (click to auto-fill):</p>
           <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => {
-                setValue('identifier', 'voter@iebc.go.ke');
-                setValue('password', 'Voter123456!');
-                setValue('userType', 'voter');
-              }}
-              className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
-            >
-              <span className="font-medium text-neutral-700 dark:text-neutral-300">Voter:</span>{' '}
-              <span className="text-neutral-500 dark:text-neutral-400">voter@iebc.go.ke / Voter123456!</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setValue('identifier', 'admin@iebc.go.ke');
-                setValue('password', 'Admin123456!');
-                setValue('userType', 'admin');
-              }}
-              className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
-            >
-              <span className="font-medium text-neutral-700 dark:text-neutral-300">Admin:</span>{' '}
-              <span className="text-neutral-500 dark:text-neutral-400">admin@iebc.go.ke / Admin123456!</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setValue('identifier', 'ro@iebc.go.ke');
-                setValue('password', 'Ro123456789!');
-                setValue('userType', 'ro');
-              }}
-              className="w-full text-left text-xs p-2 rounded bg-white dark:bg-neutral-800 hover:bg-primary-50 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
-            >
-              <span className="font-medium text-neutral-700 dark:text-neutral-300">RO:</span>{' '}
-              <span className="text-neutral-500 dark:text-neutral-400">ro@iebc.go.ke / Ro123456789!</span>
-            </button>
+            {[
+              { label: 'Voter', email: 'voter@iebc.go.ke', pass: 'Voter123456!', type: 'voter' },
+              { label: 'Admin', email: 'admin@iebc.go.ke', pass: 'Admin123456!', type: 'admin' },
+              { label: 'RO', email: 'ro@iebc.go.ke', pass: 'Ro123456789!', type: 'ro' },
+            ].map((account) => (
+              <button
+                key={account.label}
+                type="button"
+                onClick={() => {
+                  setValue('identifier', account.email);
+                  setValue('password', account.pass);
+                  setValue('userType', account.type as 'voter' | 'admin' | 'ro');
+                }}
+                className="w-full text-left text-xs p-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-emerald-500/30 transition-all flex items-center justify-between group"
+              >
+                <span className="font-medium text-white/70">{account.label}</span>
+                <span className="text-white/30 group-hover:text-white/50 transition-colors">{account.email}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}
-    </Card>
+
+      {/* Security Badge */}
+      <div className="mt-6 flex items-center justify-center gap-2 text-white/30 text-xs">
+        <ShieldCheckIcon className="w-4 h-4 text-emerald-500/50" />
+        <span>256-bit AES Encrypted Connection</span>
+      </div>
+    </div>
   );
 }

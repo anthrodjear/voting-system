@@ -10,6 +10,7 @@ import { County } from '../../entities/county.entity';
 import { Constituency } from '../../entities/constituency.entity';
 import { Ward } from '../../entities/ward.entity';
 import { AuditLog } from '../../entities/audit-log.entity';
+import { Election } from '../../entities/election.entity';
 import { RegisterVoterDto, UpdateVoterDto, BiometricEnrollDto } from '../../dto/voter.dto';
 
 @Injectable()
@@ -29,6 +30,8 @@ export class VoterService {
     private wardRepository: Repository<Ward>,
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
+    @InjectRepository(Election)
+    private electionRepository: Repository<Election>,
   ) {}
 
   async register(dto: RegisterVoterDto, userId?: string): Promise<{ voterId: string; status: string; message: string }> {
@@ -257,5 +260,32 @@ export class VoterService {
       fingerprintEnrolled: voter.biometric?.fingerprintEnrolled || false,
       verifiedAt: voter.verifiedAt,
     };
+  }
+
+  async getUpcomingElections(voterCountyId: string): Promise<any[]> {
+    const now = new Date();
+    
+    // Get elections that are upcoming and either:
+    // 1. Have no counties specified (national elections), or
+    // 2. Include the voter's county
+    const elections = await this.electionRepository
+      .createQueryBuilder('election')
+      .where('election.election_date >= :now', { now })
+      .andWhere('election.status = :status', { status: 'active' })
+      .andWhere('(election.counties IS NULL OR array_length(election.counties, 1) = 0 OR :countyId = ANY(election.counties))', { countyId: voterCountyId })
+      .orderBy('election.election_date', 'ASC')
+      .take(10)
+      .getMany();
+
+    return elections.map(election => ({
+      id: election.id,
+      name: election.electionName,
+      type: election.electionType,
+      status: election.status,
+      startDate: election.votingStartDate?.toISOString(),
+      endDate: election.votingEndDate?.toISOString(),
+      registrationDeadline: election.registrationEndDate?.toISOString(),
+      counties: election.counties,
+    }));
   }
 }

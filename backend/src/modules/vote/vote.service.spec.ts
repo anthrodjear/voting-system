@@ -8,6 +8,7 @@ import { Election } from '../../entities/election.entity';
 import { Candidate } from '../../entities/candidate.entity';
 import { Voter } from '../../entities/voter.entity';
 import { AuditLog } from '../../entities/audit-log.entity';
+import { BlockchainService } from '../../services/blockchain.service';
 
 describe('VoteService', () => {
   let service: VoteService;
@@ -42,6 +43,11 @@ describe('VoteService', () => {
     save: jest.fn(),
   };
 
+  const mockBlockchainService = {
+    validateVoterEligibility: jest.fn(),
+    recordVoteHash: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,11 +58,25 @@ describe('VoteService', () => {
         { provide: getRepositoryToken(Candidate), useValue: mockCandidateRepository },
         { provide: getRepositoryToken(Voter), useValue: mockVoterRepository },
         { provide: getRepositoryToken(AuditLog), useValue: mockAuditLogRepository },
+        { provide: BlockchainService, useValue: mockBlockchainService },
       ],
     }).compile();
 
     service = module.get<VoteService>(VoteService);
     jest.clearAllMocks();
+    mockBlockchainService.validateVoterEligibility.mockResolvedValue({
+      eligible: true,
+      reason: null,
+      details: { isRegistered: true, hasVoted: false, electionState: 'voting' },
+    });
+    mockBlockchainService.recordVoteHash.mockResolvedValue({
+      transactionHash: '0xabc123',
+      blockNumber: 123,
+      blockHash: '0xdef',
+      gasUsed: 21000,
+      status: true,
+      logs: [],
+    });
   });
 
   // =========================================================================
@@ -182,6 +202,8 @@ describe('VoteService', () => {
       mockVoterRepository.findOne.mockResolvedValue(mockVoter);
       mockTrackingRepository.findOne.mockResolvedValue(null);
       mockElectionRepository.findOne.mockResolvedValue(mockElection);
+      mockBlockchainService.validateVoterEligibility.mockResolvedValue({ eligible: true, reason: null, details: { isRegistered: true, hasVoted: false, electionState: 'voting' } });
+      mockBlockchainService.recordVoteHash.mockResolvedValue({ transactionHash: '0xabc123', blockNumber: 123, blockHash: '0xdef', gasUsed: 21000, status: true, logs: [] });
       mockVoteRepository.save.mockImplementation((v) =>
         Promise.resolve({ id: 'vote-1', ...v }),
       );
@@ -194,6 +216,7 @@ describe('VoteService', () => {
       expect(result.confirmationId).toMatch(/^VN[A-Z0-9]{12}$/);
       expect(result.voteHash).toBeDefined();
       expect(result.timestamp).toBeDefined();
+      expect(result.blockchainTxHash).toBe('0xabc123');
       expect(result.message).toBe('Vote recorded successfully');
     });
 

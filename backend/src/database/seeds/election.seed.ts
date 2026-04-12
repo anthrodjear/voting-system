@@ -17,6 +17,7 @@ interface ElectionData {
   enableOnlineVoting: boolean;
   totalVotesCast?: number;
   turnoutPercentage?: number;
+  counties?: string[];
 }
 
 @Injectable()
@@ -110,7 +111,7 @@ export class ElectionSeed {
       nominationEndDate: new Date('2027-06-15'),
       votingStartDate: new Date('2027-08-17T06:00:00'),
       votingEndDate: new Date('2027-08-17T18:00:00'),
-      status: 'draft',
+      status: 'active',
       enableOnlineVoting: true,
     },
     {
@@ -123,8 +124,9 @@ export class ElectionSeed {
       nominationEndDate: new Date('2025-02-10'),
       votingStartDate: new Date('2025-03-15T06:00:00'),
       votingEndDate: new Date('2025-03-15T17:00:00'),
-      status: 'draft',
+      status: 'active',
       enableOnlineVoting: true,
+      counties: ['Nairobi'],
     },
     {
       electionName: 'Kenya By-Election 2024 - Mombasa',
@@ -138,6 +140,7 @@ export class ElectionSeed {
       votingEndDate: new Date('2024-10-15T17:00:00'),
       status: 'draft',
       enableOnlineVoting: true,
+      counties: ['Mombasa'],
     },
     // Additional test elections
     {
@@ -169,6 +172,7 @@ export class ElectionSeed {
       enableOnlineVoting: true,
       totalVotesCast: 28765,
       turnoutPercentage: 48.92,
+      counties: ['Nakuru'],
     },
   ];
 
@@ -203,6 +207,7 @@ export class ElectionSeed {
             enableOnlineVoting: electionData.enableOnlineVoting,
             totalVotesCast: electionData.totalVotesCast || 0,
             turnoutPercentage: electionData.turnoutPercentage || undefined,
+            counties: electionData.counties || [],
           });
           this.logger.debug(`Updated election: ${electionData.electionName}`);
         } else {
@@ -220,6 +225,7 @@ export class ElectionSeed {
             enableOnlineVoting: electionData.enableOnlineVoting,
             totalVotesCast: electionData.totalVotesCast || 0,
             turnoutPercentage: electionData.turnoutPercentage || undefined,
+            counties: electionData.counties || [],
           });
           await this.electionRepository.save(election);
           this.logger.debug(`Inserted election: ${electionData.electionName}`);

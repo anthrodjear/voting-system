@@ -1,0 +1,27 @@
+{
+  "config": {
+    "chainId": 1337,
+    "consensusProtocol": {
+      "IBFT2": {
+        "blockperiodseconds": 2,
+        "epochlength": 30000,
+        "messageQueueCode": 1010,
+        "voteValidating": true
+      }
+    },
+    "txnDuplicateHash": "0x4dcd6716e5b462068ad1dcbe2f07fad8ad489c6559fc4a68d5fdb62f8b47152b2"
+  },
+  "nonce": "0x0000000000000000",
+  "timestamp": "0x5f275538",
+  "gasLimit": "0x47b760",
+  "difficulty": "0x1",
+  "mixHash": "0x6374696630312e526f65746e5a6f6e45782051656467657250726f746f636f6c4578706c616e6174696f6e",
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "alloc": {},
+  "number": "0x0",
+  "gasUsed": "0x0",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "baseFeePerGas": null,
+  "excessBlobGas": null,
+  "blobGasUsed": null
+}

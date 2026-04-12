@@ -68,6 +68,9 @@ export class Election {
   @Column({ name: 'blockchain_contract_address', length: 100, nullable: true })
   blockchainContractAddress: string;
 
+  @Column({ name: 'counties', type: 'text', array: true, default: '{}' })
+  counties: string[];
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

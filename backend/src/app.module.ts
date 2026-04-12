@@ -27,6 +27,7 @@ import { RoModule } from './modules/ro/ro.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { GeographicModule } from './modules/geographic/geographic.module';
 import { UploadModule } from './modules/admin/upload.module';
+import { ObserverModule } from './modules/observer/observer.module';
 
 /**
  * Health Module
@@ -112,10 +113,10 @@ import { ThrottlerGuard } from './common/guards/throttler.guard';
      RoModule,
      NotificationModule,
      HealthModule,
-     GeographicModule,
-     UploadModule,
-     UploadModule,
-  ],
+      GeographicModule,
+      UploadModule,
+      ObserverModule,
+   ],
   
   providers: [
     {

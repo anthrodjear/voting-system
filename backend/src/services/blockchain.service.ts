@@ -12,6 +12,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import Web3 from 'web3';
 import { Buffer } from 'buffer';
+import { randomUUID } from 'crypto';
 
 // Import custom errors
 import {
@@ -175,6 +176,42 @@ export interface MixnetResult {
 }
 
 /**
+ * Event subscription
+ */
+export interface EventSubscription {
+  id: string;
+  eventType: string;
+  callback: Function;
+  createdAt: Date;
+  active: boolean;
+}
+
+/**
+ * Blockchain event types
+ */
+export type BlockchainEventType = 'VoteCast' | 'StateChanged' | 'ResultsPublished';
+
+/**
+ * Event payload types
+ */
+export interface VoteCastEvent {
+  voterHash: string;
+  voteHash: string;
+  timestamp: number;
+}
+
+export interface StateChangedEvent {
+  oldState: number;
+  newState: number;
+}
+
+export interface ResultsPublishedEvent {
+  encryptedResults: string;
+  proof: string;
+  timestamp: number;
+}
+
+/**
  * Election state enum values
  */
 enum ElectionStateEnum {
@@ -224,6 +261,11 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
   private readonly baseRetryDelay = 1000; // 1 second
   private readonly maxRetryDelay = 30000; // 30 seconds
 
+  // Event subscriptions
+  private subscriptions: Map<string, EventSubscription> = new Map();
+  private eventListeners: Map<BlockchainEventType, Set<string>> = new Map();
+  private web3EventSubscriptions: any[] = [];
+
   // Vote Contract ABI
   private static readonly VOTE_CONTRACT_ABI = [
     { "inputs": [], "stateMutability": "nonpayable", "type": "constructor" },
@@ -263,6 +305,10 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
   ) {
     this.config = this.loadBlockchainConfig();
+    // Initialize event listeners map
+    this.eventListeners.set('VoteCast', new Set());
+    this.eventListeners.set('StateChanged', new Set());
+    this.eventListeners.set('ResultsPublished', new Set());
   }
 
   /**
@@ -1316,5 +1362,252 @@ export class BlockchainService implements OnModuleInit, OnModuleDestroy {
    */
   getKeyManagerContract(): Web3Contract {
     return this.keyManagerContract;
+  }
+
+  // ==================== Event Subscription Methods ====================
+
+  /**
+   * Subscribe to blockchain events
+   * @param eventType - Type of event to subscribe to (VoteCast, StateChanged, ResultsPublished)
+   * @param callback - Function to call when event is emitted
+   * @returns Subscription ID
+   */
+  async subscribeToEvents(eventType: string, callback: Function): Promise<string> {
+    this.logger.log(`Subscribing to event: ${eventType}`);
+    
+    // Validate event type
+    const validEvents: BlockchainEventType[] = ['VoteCast', 'StateChanged', 'ResultsPublished'];
+    if (!validEvents.includes(eventType as BlockchainEventType)) {
+      throw new Error(`Invalid event type: ${eventType}. Valid types: ${validEvents.join(', ')}`);
+    }
+
+    // Create subscription
+    const subscriptionId = randomUUID();
+    const subscription: EventSubscription = {
+      id: subscriptionId,
+      eventType,
+      callback,
+      createdAt: new Date(),
+      active: true,
+    };
+
+    this.subscriptions.set(subscriptionId, subscription);
+    this.eventListeners.get(eventType as BlockchainEventType)?.add(subscriptionId);
+
+    // Set up Web3 event listener if not already set up
+    await this.setupEventListener(eventType as BlockchainEventType);
+
+    this.logger.log(`Subscribed to ${eventType} events with ID: ${subscriptionId}`);
+    return subscriptionId;
+  }
+
+  /**
+   * Unsubscribe from blockchain events
+   * @param subscriptionId - ID of the subscription to remove
+   */
+  async unsubscribe(subscriptionId: string): Promise<void> {
+    const subscription = this.subscriptions.get(subscriptionId);
+    
+    if (!subscription) {
+      throw new Error(`Subscription not found: ${subscriptionId}`);
+    }
+
+    // Remove from event listeners
+    const eventListeners = this.eventListeners.get(subscription.eventType as BlockchainEventType);
+    if (eventListeners) {
+      eventListeners.delete(subscriptionId);
+    }
+
+    // Remove subscription
+    subscription.active = false;
+    this.subscriptions.delete(subscriptionId);
+
+    // Clean up Web3 listener if no more subscriptions for this event type
+    if (!eventListeners || eventListeners.size === 0) {
+      await this.removeEventListener(subscription.eventType as BlockchainEventType);
+    }
+
+    this.logger.log(`Unsubscribed from events: ${subscriptionId}`);
+  }
+
+  /**
+   * Set up Web3 event listener for a specific event type
+   */
+  private async setupEventListener(eventType: BlockchainEventType): Promise<void> {
+    if (!this.voteContract) {
+      throw new Error('Vote contract not initialized');
+    }
+
+    // Check if listener already exists
+    if (this.web3EventSubscriptions.find(sub => sub.eventType === eventType)) {
+      return;
+    }
+
+    try {
+      const eventName = eventType;
+      let eventSubscription: any;
+
+      // Subscribe to specific event
+      if (eventName === 'VoteCast') {
+        eventSubscription = this.voteContract.events.VoteCast({
+          fromBlock: 'latest',
+        });
+      } else if (eventName === 'StateChanged') {
+        eventSubscription = this.voteContract.events.StateChanged({
+          fromBlock: 'latest',
+        });
+      } else if (eventName === 'ResultsPublished') {
+        eventSubscription = this.voteContract.events.ResultsPublished({
+          fromBlock: 'latest',
+        });
+      }
+
+      if (eventSubscription) {
+        eventSubscription.on('data', (event: any) => {
+          this.handleEvent(eventType, event);
+        });
+
+        eventSubscription.on('error', (error: Error) => {
+          this.logger.error(`Event listener error for ${eventType}: ${error.message}`);
+        });
+
+        this.web3EventSubscriptions.push({
+          eventType,
+          subscription: eventSubscription,
+        });
+
+        this.logger.log(`Web3 event listener set up for: ${eventType}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to set up event listener for ${eventType}: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Remove Web3 event listener
+   */
+  private async removeEventListener(eventType: BlockchainEventType): Promise<void> {
+    const index = this.web3EventSubscriptions.findIndex(sub => sub.eventType === eventType);
+    
+    if (index !== -1) {
+      try {
+        await this.web3EventSubscriptions[index].subscription.unsubscribe();
+        this.web3EventSubscriptions.splice(index, 1);
+        this.logger.log(`Removed event listener for: ${eventType}`);
+      } catch (error) {
+        this.logger.error(`Failed to remove event listener for ${eventType}: ${(error as Error).message}`);
+      }
+    }
+  }
+
+  /**
+   * Handle incoming blockchain events
+   */
+  private handleEvent(eventType: BlockchainEventType, event: any): void {
+    const subscriptionIds = this.eventListeners.get(eventType);
+    
+    if (!subscriptionIds || subscriptionIds.size === 0) {
+      return;
+    }
+
+    let payload: any;
+    
+    if (eventType === 'VoteCast') {
+      payload = {
+        voterHash: event.returnValues.voterHash,
+        voteHash: event.returnValues.voteHash,
+        timestamp: Number(event.returnValues.timestamp),
+        transactionHash: event.transactionHash,
+        blockNumber: Number(event.blockNumber),
+      } as VoteCastEvent;
+    } else if (eventType === 'StateChanged') {
+      payload = {
+        oldState: Number(event.returnValues.oldState),
+        newState: Number(event.returnValues.newState),
+        transactionHash: event.transactionHash,
+        blockNumber: Number(event.blockNumber),
+      } as StateChangedEvent;
+    } else if (eventType === 'ResultsPublished') {
+      payload = {
+        encryptedResults: event.returnValues.encryptedResults,
+        proof: event.returnValues.proof,
+        timestamp: Number(event.returnValues.timestamp),
+        transactionHash: event.transactionHash,
+        blockNumber: Number(event.blockNumber),
+      } as ResultsPublishedEvent;
+    }
+
+    // Notify all subscribers
+    for (const subscriptionId of subscriptionIds) {
+      const subscription = this.subscriptions.get(subscriptionId);
+      if (subscription && subscription.active) {
+        try {
+          subscription.callback(payload);
+          this.logger.debug(`Event ${eventType} sent to subscription: ${subscriptionId}`);
+        } catch (error) {
+          this.logger.error(`Error in event callback for ${subscriptionId}: ${(error as Error).message}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Get all active subscriptions
+   */
+  getActiveSubscriptions(): EventSubscription[] {
+    return Array.from(this.subscriptions.values()).filter(sub => sub.active);
+  }
+
+  /**
+   * Add candidate to the election (admin)
+   * @param candidateId - Unique candidate identifier
+   * @param encryptedCount - Encrypted initial vote count
+   * @param proof - ZK proof for initialization
+   */
+  async addCandidate(candidateId: string, encryptedCount: string, proof: string): Promise<void> {
+    this.logger.log(`Adding candidate: ${candidateId}`);
+    
+    if (!this.isInitialized || !this.voteContract) {
+      throw new Error('Blockchain not initialized');
+    }
+
+    // In production, this would call a smart contract method to add candidate
+    // For now, we log the action
+    this.logger.log(`Candidate ${candidateId} would be added with initial count: ${encryptedCount}`);
+    
+    // Note: The actual contract method for adding candidates would need to be defined
+    // in the smart contract. This is a placeholder for that functionality.
+  }
+
+  /**
+   * Emergency pause the election
+   */
+  async emergencyPause(): Promise<void> {
+    this.logger.log('Emergency pause requested');
+    
+    if (!this.voteContract) {
+      throw new Error('Vote contract not initialized');
+    }
+
+    // Pause the election - set to a special paused state
+    await this.setElectionState('tallying');
+    
+    this.logger.log('Election emergency paused');
+  }
+
+  /**
+   * Emergency unpause the election
+   */
+  async emergencyUnpause(): Promise<void> {
+    this.logger.log('Emergency unpause requested');
+    
+    if (!this.voteContract) {
+      throw new Error('Vote contract not initialized');
+    }
+
+    // Unpause the election - resume to voting state
+    await this.setElectionState('voting');
+    
+    this.logger.log('Election emergency unpaused');
   }
 }

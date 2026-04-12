@@ -9,7 +9,8 @@ import {
   ExclamationTriangleIcon,
   BellIcon,
   ArrowRightIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { Card, Badge, Progress, Button } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
@@ -26,26 +27,21 @@ export default function VoterDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Array<any>>([]);
 
-  // Fetch data on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Fetch registration status
         const statusResponse = await getRegistrationStatus();
         setRegistrationStatus(statusResponse);
         
-        // Fetch upcoming elections
         const electionsResponse = await getUpcomingElections();
         setUpcomingElections(electionsResponse);
         
-        // Fetch notifications from real API
         try {
           const notificationsResponse = await getNotifications();
           setNotifications(notificationsResponse);
         } catch {
-          // Notifications fetch failure is non-critical
           setNotifications([]);
         }
       } catch (err: any) {
@@ -58,272 +54,280 @@ export default function VoterDashboardPage() {
     fetchData();
   }, []);
 
-  // Calculate days until next election
   const daysUntilElection = upcomingElections.length > 0 
     ? Math.ceil((new Date(upcomingElections[0].votingStart).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
 
-  // Check if voting is currently open
   const hasOpenVote = upcomingElections.some(election => election.status === 'voting_open');
-  
-  // Check if voter can vote (registered and voting is open)
   const canVote = registrationStatus.status === 'verified' && hasOpenVote;
 
+  const getStatusColor = () => {
+    switch (registrationStatus.status) {
+      case 'verified': return 'text-emerald-400';
+      case 'pending': return 'text-amber-400';
+      case 'rejected': return 'text-red-400';
+      default: return 'text-neutral-400';
+    }
+  };
+
+  const getStatusBg = () => {
+    switch (registrationStatus.status) {
+      case 'verified': return 'bg-emerald-500/10 border-emerald-500/20';
+      case 'pending': return 'bg-amber-500/10 border-amber-500/20';
+      case 'rejected': return 'bg-red-500/10 border-red-500/20';
+      default: return 'bg-neutral-500/10 border-neutral-500/20';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-voter-500/30 border-t-voter-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-voter-500 to-voter-600 rounded-2xl p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">
-          Welcome back, {user?.firstName || 'Voter'}!
+    <div className="space-y-8">
+      {/* Header - Linear style */}
+      <div className="border-b border-neutral-800 pb-6">
+        <h1 className="text-2xl font-semibold text-white mb-1">
+          Welcome back, {user?.firstName || 'Voter'}
         </h1>
-        <p className="text-voter-100">
+        <p className="text-neutral-400 text-sm">
           Your voice matters. Participate in Kenya's democratic process.
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Registration Status Card */}
-        <Card className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-voter-50">
-            <ClipboardDocumentCheckIcon className="w-8 h-8 text-voter-500" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-neutral-500 mb-1">Registration Status</p>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-neutral-900">
-                {registrationStatus.status === 'verified' ? 'Verified' : 
-                 registrationStatus.status === 'pending' ? 'Pending Verification' :
-                 registrationStatus.status === 'rejected' ? 'Registration Rejected' :
-                 'Not Registered'}
-              </span>
-              {registrationStatus.status === 'verified' && (
-                <CheckCircleIcon className="w-6 h-6 text-success" />
-              )}
-              {registrationStatus.status === 'pending' && (
-                <ClockIcon className="w-6 h-6 text-warning" />
-              )}
-              {registrationStatus.status === 'rejected' && (
-                <ExclamationTriangleIcon className="w-6 h-6 text-error" />
-              )}
-            </div>
-            {registrationStatus.message && (
-              <p className="text-xs text-neutral-500 mt-1">{registrationStatus.message}</p>
+      {/* Stats Row - Linear style inline stats */}
+      <div className="grid grid-cols-3 gap-px bg-neutral-800 rounded-lg overflow-hidden divide-x divide-neutral-800">
+        <div className="bg-neutral-900/50 px-5 py-4">
+          <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider mb-1">Registration</p>
+          <div className="flex items-center gap-2">
+            <span className={`text-lg font-medium ${getStatusColor()}`}>
+              {registrationStatus.status === 'verified' ? 'Verified' : 
+               registrationStatus.status === 'pending' ? 'Pending' :
+               registrationStatus.status === 'rejected' ? 'Rejected' :
+               'Not Registered'}
+            </span>
+            {registrationStatus.status === 'verified' && (
+              <CheckCircleIcon className="w-4 h-4 text-emerald-400" />
             )}
           </div>
-        </Card>
-
-        {/* Next Election Countdown */}
-        <Card className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-primary-50">
-            <CalendarDaysIcon className="w-8 h-8 text-primary-500" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-neutral-500 mb-1">Next Election</p>
-            <span className="text-2xl font-bold text-neutral-900">
-              {daysUntilElection} days
-            </span>
-          </div>
-        </Card>
-
-        {/* Voting Power */}
-        <Card className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-success-light">
-            <ClipboardDocumentListIcon className="w-8 h-8 text-success" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-neutral-500 mb-1">Your Vote</p>
-            <span className="text-2xl font-bold text-neutral-900">
-              {canVote ? 'Ready to Cast' : 
-               registrationStatus.status !== 'verified' ? 'Registration Required' : 
-               'Awaiting Election'}
-            </span>
-          </div>
-        </Card>
+        </div>
+        
+        <div className="bg-neutral-900/50 px-5 py-4">
+          <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider mb-1">Next Election</p>
+          <span className="text-lg font-medium text-white">
+            {daysUntilElection} days
+          </span>
+        </div>
+        
+        <div className="bg-neutral-900/50 px-5 py-4">
+          <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider mb-1">Your Vote</p>
+          <span className="text-lg font-medium text-white">
+            {canVote ? 'Ready to Cast' : 
+             registrationStatus.status !== 'verified' ? 'Register First' : 
+             'Awaiting Election'}
+          </span>
+        </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      {/* Two Column Layout */}
+      <div className="grid lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">Quick Actions</h3>
-            <div className="grid sm:grid-cols-2 gap-4">
+          {/* Quick Actions - Minimal style */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider">Quick Actions</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <Link href="/voter/register">
-                <div className="p-4 border border-neutral-200 rounded-xl hover:border-voter-300 hover:bg-voter-50 transition-all cursor-pointer">
-                  <ClipboardDocumentCheckIcon className="w-8 h-8 text-voter-500 mb-3" />
-                  <h4 className="font-semibold text-neutral-900 mb-1">Complete Registration</h4>
-                  <p className="text-sm text-neutral-500">Verify your identity and register to vote</p>
+                <div className="group px-4 py-3 bg-neutral-900/50 border border-neutral-800 rounded-lg hover:border-voter-500/50 hover:bg-voter-500/5 transition-all cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-voter-500/10">
+                      <ClipboardDocumentCheckIcon className="w-4 h-4 text-voter-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white group-hover:text-voter-400 transition-colors">Complete Registration</p>
+                      <p className="text-xs text-neutral-500">Verify your identity</p>
+                    </div>
+                    <ChevronRightIcon className="w-4 h-4 text-neutral-600 ml-auto group-hover:text-voter-400 transition-colors" />
+                  </div>
                 </div>
               </Link>
               
               {canVote ? (
                 <Link href="/voter/vote">
-                  <div className="p-4 border border-neutral-200 rounded-xl hover:border-success-300 hover:bg-success-light transition-all cursor-pointer">
-                    <ClipboardDocumentListIcon className="w-8 h-8 text-success mb-3" />
-                    <h4 className="font-semibold text-neutral-900 mb-1">Cast Your Vote</h4>
-                    <p className="text-sm text-neutral-500">Participate in upcoming elections</p>
+                  <div className="group px-4 py-3 bg-neutral-900/50 border border-neutral-800 rounded-lg hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-emerald-500/10">
+                        <ClipboardDocumentListIcon className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">Cast Your Vote</p>
+                        <p className="text-xs text-neutral-500">Participate in elections</p>
+                      </div>
+                      <ChevronRightIcon className="w-4 h-4 text-neutral-600 ml-auto group-hover:text-emerald-400 transition-colors" />
+                    </div>
                   </div>
                 </Link>
               ) : (
-                <div className="p-4 border border-neutral-200 rounded-xl bg-neutral-50 cursor-not-allowed">
-                  <ClipboardDocumentListIcon className="w-8 h-8 text-neutral-400 mb-3" />
-                  <h4 className="font-semibold text-neutral-500 mb-1">Cast Your Vote</h4>
-                  <p className="text-sm text-neutral-400">
-                    {!hasOpenVote 
-                      ? 'No elections currently open for voting' 
-                      : 'Complete registration to vote'
-                    }
-                  </p>
+                <div className="px-4 py-3 bg-neutral-900/30 border border-neutral-800/50 rounded-lg opacity-60">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-neutral-800">
+                      <ClipboardDocumentListIcon className="w-4 h-4 text-neutral-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-neutral-500">Cast Your Vote</p>
+                      <p className="text-xs text-neutral-600">
+                        {!hasOpenVote ? 'No elections open' : 'Complete registration first'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-          </Card>
+          </div>
 
-          {/* Upcoming Elections */}
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-neutral-900">Upcoming Elections</h3>
-              <Link href="/voter/elections" className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1">
-                View All <ArrowRightIcon className="w-4 h-4" />
+          {/* Upcoming Elections - List style */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider">Upcoming Elections</h2>
+              <Link href="/voter/elections" className="text-xs text-voter-400 hover:text-voter-300 flex items-center gap-1">
+                View All <ArrowRightIcon className="w-3 h-3" />
               </Link>
             </div>
             
-            <div className="space-y-4">
-              {upcomingElections.map((election) => (
+            <div className="border border-neutral-800 rounded-lg overflow-hidden">
+              {upcomingElections.map((election, index) => (
                 <div 
                   key={election.id}
-                  className="p-4 bg-neutral-50 rounded-xl border border-neutral-100"
+                  className={`px-4 py-4 bg-neutral-900/30 hover:bg-neutral-900/50 transition-colors ${
+                    index !== upcomingElections.length - 1 ? 'border-b border-neutral-800' : ''
+                  }`}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-neutral-900">{election.name}</h4>
-                      <p className="text-sm text-neutral-500">{election.type}</p>
-                    </div>
-                    <Badge 
-                      variant={election.status === 'registration_open' ? 'success' : 'info'}
-                    >
-                      {election.status === 'registration_open' ? 'Registration Open' : 'Upcoming'}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-neutral-500">Registration Deadline</p>
-                      <p className="font-medium text-neutral-900">
-                        {formatDate(election.registrationDeadline)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-neutral-500">Voting Dates</p>
-                      <p className="font-medium text-neutral-900">
-                        {formatDate(election.votingStart)} - {formatDate(election.votingEnd)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {election.status === 'registration_open' && (
-                    <div className="mt-4 pt-4 border-t border-neutral-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-neutral-500">Registration Progress</span>
-                        <span className="text-sm font-medium text-neutral-700">75%</span>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-sm font-medium text-white">{election.name}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          election.status === 'registration_open' 
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-neutral-800 text-neutral-400'
+                        }`}>
+                          {election.status === 'registration_open' ? 'Registration Open' : 'Upcoming'}
+                        </span>
                       </div>
-                      <Progress value={75} variant="success" size="sm" />
+                      <div className="flex items-center gap-6 text-xs text-neutral-500">
+                        <span>Registration: {formatDate(election.registrationDeadline)}</span>
+                        <span>Voting: {formatDate(election.votingStart)} - {formatDate(election.votingEnd)}</span>
+                      </div>
                     </div>
-                  )}
+                    <ArrowRightIcon className="w-4 h-4 text-neutral-600" />
+                  </div>
                 </div>
               ))}
+              
+              {upcomingElections.length === 0 && (
+                <div className="px-4 py-8 text-center text-neutral-500 text-sm">
+                  No upcoming elections
+                </div>
+              )}
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Notifications */}
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-neutral-900">Notifications</h3>
-              <Badge variant="warning">{notifications.filter(n => !n.read).length} new</Badge>
-            </div>
-            
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <div 
-                  key={notification.id}
-                  className={`p-3 rounded-lg ${
-                    notification.read ? 'bg-neutral-50' : 'bg-voter-50 border-l-4 border-voter-500'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <BellIcon className="w-5 h-5 text-neutral-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-neutral-900 text-sm">{notification.title}</p>
-                      <p className="text-xs text-neutral-500 mt-1">{notification.message}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Button variant="ghost" fullWidth className="mt-4">
-              View All Notifications
-            </Button>
-          </Card>
-
-          {/* Registration Reminder */}
+          {/* Status Alert */}
           {registrationStatus.status !== 'verified' && (
-            <Card className={`border-l-4 ${
-              registrationStatus.status === 'rejected' 
-                ? 'bg-error-light border-l-error' 
-                : 'bg-warning-light border-l-warning'
-            }`}>
+            <div className={`px-4 py-3 rounded-lg border ${getStatusBg()}`}>
               <div className="flex items-start gap-3">
-                <ExclamationTriangleIcon className={`w-6 h-6 flex-shrink-0 ${
-                  registrationStatus.status === 'rejected' ? 'text-error' : 'text-warning'
-                }`} />
-                <div>
-                  <h4 className="font-semibold text-neutral-900 mb-1">
-                    {registrationStatus.status === 'rejected' 
-                      ? 'Registration Rejected' 
-                      : registrationStatus.status === 'pending'
-                      ? 'Registration Pending'
-                      : 'Complete Your Registration'}
-                  </h4>
-                  <p className="text-sm text-neutral-600 mb-3">
+                {registrationStatus.status === 'verified' ? (
+                  <CheckCircleIcon className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                ) : registrationStatus.status === 'pending' ? (
+                  <ClockIcon className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                ) : (
+                  <ExclamationTriangleIcon className="w-5 h-5 text-red-400 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-white mb-1">
+                    {registrationStatus.status === 'rejected' ? 'Registration Rejected' : 
+                     registrationStatus.status === 'pending' ? 'Registration Pending' : 
+                     'Complete Your Registration'}
+                  </p>
+                  <p className="text-xs text-neutral-400 mb-3">
                     {registrationStatus.status === 'rejected'
-                      ? 'Your registration was rejected. Please contact support or re-register with corrected information.'
+                      ? 'Please re-register with corrected information.'
                       : registrationStatus.status === 'pending'
-                      ? 'Your registration is being reviewed. You will be notified once verification is complete.'
-                      : 'You\'re not fully registered yet. Complete the process to participate in upcoming elections.'}
+                      ? 'Your registration is being reviewed.'
+                      : 'Register to participate in elections.'}
                   </p>
                   {registrationStatus.status !== 'pending' && (
                     <Link href="/voter/register">
-                      <Button size="sm">
+                      <Button size="sm" variant={registrationStatus.status === 'rejected' ? 'destructive' : 'primary'}>
                         {registrationStatus.status === 'rejected' ? 'Re-register' : 'Complete Registration'}
                       </Button>
                     </Link>
                   )}
                 </div>
               </div>
-            </Card>
+            </div>
           )}
 
-          {/* Help & Support */}
-          <Card>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">Need Help?</h3>
-            <div className="space-y-3">
-              <a href="#" className="flex items-center gap-3 text-neutral-600 hover:text-neutral-900">
-                <ClockIcon className="w-5 h-5" />
-                <span className="text-sm">Help Center</span>
-              </a>
-              <a href="#" className="flex items-center gap-3 text-neutral-600 hover:text-neutral-900">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                <span className="text-sm">Contact Support</span>
-              </a>
+          {/* Notifications */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider">Notifications</h2>
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-voter-500/10 text-voter-400 border border-voter-500/20">
+                  {notifications.filter(n => !n.read)} new
+                </span>
+              )}
             </div>
-          </Card>
+            
+            <div className="border border-neutral-800 rounded-lg overflow-hidden">
+              {notifications.slice(0, 4).map((notification, index) => (
+                <div 
+                  key={notification.id}
+                  className={`px-4 py-3 hover:bg-neutral-900/30 transition-colors ${
+                    index !== Math.min(notifications.length, 4) - 1 ? 'border-b border-neutral-800' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <BellIcon className="w-4 h-4 text-neutral-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-white">{notification.title}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">{notification.message}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {notifications.length === 0 && (
+                <div className="px-4 py-6 text-center text-neutral-500 text-sm">
+                  No notifications
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Help Links - Minimal */}
+          <div>
+            <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wider mb-3">Help</h2>
+            <div className="space-y-1">
+              <Link href="#" className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-2 rounded-md hover:bg-neutral-900/50">
+                <ChevronRightIcon className="w-3 h-3" />
+                Help Center
+              </Link>
+              <Link href="#" className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-2 rounded-md hover:bg-neutral-900/50">
+                <ChevronRightIcon className="w-3 h-3" />
+                Contact Support
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

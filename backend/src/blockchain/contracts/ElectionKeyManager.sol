@@ -77,8 +77,14 @@ contract ElectionKeyManager is AccessControl, ReentrancyGuard, Pausable {
     /// @notice Last key rotation timestamp
     uint256 public lastKeyRotation;
     
+    /// @notice Next time key rotation is allowed
+    uint256 public nextValidKeyTime;
+    
     /// @notice Minimum time between key rotations (30 days)
     uint256 public constant KEY_ROTATION_INTERVAL = 30 days;
+    
+    /// @notice Delay before requesting key rotation (7 days)
+    uint256 public constant KEY_ROTATION_DELAY = 7 days;
     
     /// @notice Maximum HE public key length (8192 bytes for 4096-bit keys)
     uint256 public constant MAX_HE_KEY_LENGTH = 8192;

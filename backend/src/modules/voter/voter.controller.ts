@@ -228,4 +228,23 @@ export class VoterController {
       data: safeVoter,
     };
   }
+
+  @Get('elections')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get upcoming elections available to the current voter' })
+  @ApiResponse({ status: 200, description: 'List of upcoming elections for the voter' })
+  async getMyElections(
+    @CurrentUser('id') voterId: string,
+  ): Promise<any[]> {
+    // Get the voter to access their county
+    const voter = await this.voterService.findById(voterId);
+    if (!voter) {
+      throw new NotFoundException('Voter not found');
+    }
+
+    const elections = await this.voterService.getUpcomingElections(voter.countyId);
+
+    return elections;
+  }
 }

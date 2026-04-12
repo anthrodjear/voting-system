@@ -19,7 +19,16 @@ interface AuthProviderProps {
 }
 
   // Routes that don't require authentication
-  const PUBLIC_ROUTES = ['/', '/auth/login', '/auth/register', '/auth/forgot-password'];
+  const PUBLIC_ROUTES = [
+    '/',
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/observer',
+    '/observer/candidates',
+    '/observer/blockchain',
+    '/observer/reports',
+  ];
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();

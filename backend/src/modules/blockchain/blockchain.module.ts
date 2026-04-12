@@ -8,9 +8,10 @@
  * - Service health indicators
  */
 
-import { Module, Global, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BlockchainService } from '../../services/blockchain.service';
+import { BlockchainController } from './blockchain.controller';
 
 /**
  * Circuit breaker state
@@ -62,6 +63,7 @@ const DEFAULT_CIRCUIT_BREAKER_CONFIG: CircuitBreakerConfig = {
   imports: [
     ConfigModule, // Ensure ConfigModule is available globally
   ],
+  controllers: [BlockchainController],
   providers: [
     BlockchainService,
     {

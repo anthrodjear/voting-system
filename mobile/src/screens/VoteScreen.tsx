@@ -91,10 +91,11 @@ const VoteScreen: React.FC<VoteScreenProps> = ({ navigation, route }) => {
   const renderCandidate = ({ item }: { item: Candidate }) => (
     <TouchableOpacity
       style={[
-        styles.candidateCard,
+        styles.candidateItem,
         selectedCandidate?.id === item.id && styles.candidateCardSelected,
       ]}
       onPress={() => setSelectedCandidate(item)}
+      activeOpacity={0.6}
     >
       <View style={styles.candidateRadio}>
         <View style={[
@@ -115,7 +116,7 @@ const VoteScreen: React.FC<VoteScreenProps> = ({ navigation, route }) => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#c0392b" />
+        <ActivityIndicator size="large" color="#ff453a" />
         <Text style={styles.loadingText}>Loading candidates...</Text>
       </View>
     );
@@ -173,142 +174,151 @@ const VoteScreen: React.FC<VoteScreenProps> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000000',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#000000',
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
+    color: '#8e8e93',
   },
   header: {
-    padding: 20,
-    backgroundColor: '#c0392b',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: '#000000',
   },
   backButton: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 8,
+    color: '#0a84ff',
+    fontSize: 17,
+    fontWeight: '500',
+    marginBottom: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 15,
+    color: '#8e8e93',
+    marginTop: 4,
   },
   statusBar: {
     flexDirection: 'row',
-    padding: 12,
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#1c1c1e',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
   },
   statusItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    backgroundColor: '#2c2c2e',
   },
   statusVerified: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#1a3d1a',
   },
   statusIcon: {
     marginRight: 8,
-    fontSize: 16,
+    fontSize: 14,
+    color: '#30d158',
   },
   statusLabel: {
     fontSize: 14,
-    color: '#333',
+    color: '#ffffff',
   },
   list: {
-    padding: 16,
+    paddingBottom: 100,
   },
-  candidateCard: {
+  candidateItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#38383a',
   },
   candidateCardSelected: {
-    borderColor: '#c0392b',
-    backgroundColor: '#fdf2f2',
+    backgroundColor: '#1c1c1e',
   },
   candidateRadio: {
-    marginRight: 12,
+    marginRight: 16,
   },
   radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: '#48484a',
     justifyContent: 'center',
     alignItems: 'center',
   },
   radioOuterSelected: {
-    borderColor: '#c0392b',
+    borderColor: '#ff453a',
+    borderWidth: 3,
   },
   radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#c0392b',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ff453a',
   },
   candidateInfo: {
     flex: 1,
   },
   candidateName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: -0.3,
   },
   candidateParty: {
     fontSize: 14,
-    color: '#666',
+    color: '#8e8e93',
     marginTop: 2,
   },
   candidatePosition: {
     fontSize: 12,
-    color: '#999',
+    color: '#636366',
     marginTop: 2,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#666',
-    marginTop: 40,
+    color: '#8e8e93',
+    marginTop: 60,
+    fontSize: 15,
   },
   footer: {
     padding: 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    paddingBottom: 50,
+    backgroundColor: '#1c1c1e',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#38383a',
   },
   submitButton: {
-    backgroundColor: '#c0392b',
+    backgroundColor: '#ff453a',
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#a0a0a0',
+    backgroundColor: '#48484a',
   },
   submitButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });
 
